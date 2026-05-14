@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Summary UI Test</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      padding: 40px;
+    }
+    .test-container {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #0f172a;
+      padding: 20px;
+      border-radius: 16px;
+      border: 1px solid rgba(125, 211, 252, 0.2);
+    }
+    h1 {
+      color: #e8f0fd;
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Summary UI Preview</h1>
+    
+    <!-- Test the new summary UI -->
+    <div class="summary-panel">
+      <div class="summary-header">
+        <svg class="summary-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l2.6 2.6L18 6l-1.4 3.4L19 12l-2.4 2.6L18 18l-3.4.4L12 21l-2.6-2.6L6 18l1.4-3.4L5 12l2.4-2.6L6 6l3.4-.4L12 3zm0 5.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+        <h3 class="summary-title">Summary</h3>
+      </div>
+      <div class="summary-divider"></div>
+      <p class="summary-text">This is a clean, minimal summary display without all the technical statistics. The AI icon and subtle divider create an elegant, professional appearance that fits a modern SaaS design aesthetic.</p>
+    </div>
+  </div>
+</body>
+</html>

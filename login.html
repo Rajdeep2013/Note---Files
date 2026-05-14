@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Note Files</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --bg-sidebar: #1e293b;
+      --bg-cards: #1e293b;
+      --bg-inputs: #0f172a;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-primary: #6366f1;
+      --accent-hover: #4f46e5;
+      --border-color: #334155;
+      --panel: rgba(30, 41, 59, 0.64);
+      --panel-soft: rgba(30, 41, 59, 0.58);
+      --stroke: rgba(148, 163, 184, 0.22);
+      --text: var(--text-primary);
+      --muted: var(--text-secondary);
+      --accent: var(--accent-primary);
+      --accent-2: var(--accent-hover);
+      --danger: #f87171;
+      --success: #4ade80;
+      --shadow: 0 24px 52px rgba(2, 6, 23, 0.45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Manrope", system-ui, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(99,102,241,0.18), transparent 55%),
+                  radial-gradient(900px 650px at 85% 90%, rgba(79,70,229,0.15), transparent 60%),
+                  linear-gradient(150deg, #111b31 0%, #0f172a 45%, #0f172a 100%);
+      overflow-x: hidden;
+    }
+    .page {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) minmax(320px, 460px) minmax(220px, 1fr);
+      align-items: center;
+      gap: 1.2rem;
+      padding: 1.5rem;
+    }
+    .side {
+      display: grid;
+      gap: 0.9rem;
+      animation: fadeIn .9s ease both;
+    }
+    .floating-card, .mini-card, .dashboard-preview, .login-card {
+      background: var(--panel-soft);
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px) saturate(115%);
+    }
+    .floating-card {
+      padding: 0.9rem;
+      animation: float 6s ease-in-out infinite;
+    }
+    .floating-card h4, .mini-card h4 {
+      margin: 0 0 0.35rem;
+      font-size: 0.9rem;
+      font-family: "Space Grotesk", sans-serif;
+    }
+    .floating-card p, .mini-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.77rem;
+      line-height: 1.4;
+    }
+    .mini-card { padding: 0.75rem 0.9rem; }
+    .dashboard-preview { padding: 0.95rem; animation: float 7.2s ease-in-out infinite; }
+    .dash-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.7rem;
+      font-family: "Space Grotesk", sans-serif; font-size: 0.84rem;
+    }
+    .status {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+      box-shadow: 0 0 12px var(--success);
+    }
+    .dash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.55rem; }
+    .tile {
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      background: rgba(15, 23, 42, 0.7);
+      height: 52px;
+      padding: 0.45rem;
+      font-size: 0.72rem;
+      color: var(--text-primary);
+    }
+    .login-card {
+      padding: 1.45rem 1.2rem;
+      animation: fadeIn 0.7s ease both;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      justify-content: flex-start;
+    }
+    .logo-wrap {
+      width: 82px;
+      min-width: 82px;
+      height: 82px;
+      border-radius: 28px;
+      padding: 14px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0.18), rgba(79, 70, 229, 0.12));
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      box-shadow: 0 28px 60px rgba(36, 63, 120, 0.18), inset 0 1px 2px rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+      transition: transform .22s ease, box-shadow .22s ease, background .22s ease;
+    }
+    .logo-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.32), transparent 35%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .logo-wrap:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 34px 72px rgba(36, 63, 120, 0.24), inset 0 1px 2px rgba(255, 255, 255, 0.22);
+    }
+    .logo {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      transition: transform .22s ease;
+    }
+    .logo-wrap:hover .logo { transform: scale(1.02); }
+    .brand-text h1 {
+      margin: 0;
+      font-size: 1.55rem;
+      font-family: "Space Grotesk", sans-serif;
+      letter-spacing: -0.03em;
+    }
+    .brand-text .sub {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      max-width: 24rem;
+      line-height: 1.5;
+    }
+    .field { margin-bottom: 0.82rem; }
+    .label { display: block; margin-bottom: 0.35rem; font-size: 0.78rem; color: var(--text-primary); }
+    .input-wrap {
+      display: flex; align-items: center; gap: 0.45rem;
+      border: 1px solid var(--stroke);
+      border-radius: 11px;
+      padding: 0 0.7rem;
+      background: rgba(15, 23, 42, 0.72);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .input-wrap:focus-within {
+      border-color: rgba(99,102,241,0.62);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.2), 0 0 20px rgba(99,102,241,0.22);
+    }
+    input {
+      width: 100%;
+      height: 44px;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      font: inherit;
+      font-size: 0.9rem;
+    }
+    input::placeholder { color: var(--text-secondary); }
+    .toggle {
+      background: none; border: 0; color: var(--text-secondary); cursor: pointer; font-size: 0.75rem;
+    }
+    .message {
+      min-height: 20px;
+      margin: 0.25rem 0 0.75rem;
+      font-size: 0.78rem;
+      color: var(--danger);
+    }
+    .message.ok { color: var(--success); }
+    .actions {
+      display: grid; gap: 0.65rem;
+    }
+    .btn {
+      border: 0;
+      border-radius: 11px;
+      height: 44px;
+      font-weight: 700;
+      font-family: "Space Grotesk", sans-serif;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary {
+      color: white;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+      box-shadow: 0 10px 30px rgba(99,102,241,0.35);
+    }
+    .btn-secondary {
+      color: var(--text-primary);
+      background: rgba(30, 41, 59, 0.58);
+      border: 1px solid var(--border-color);
+    }
+    .hint { margin-top: 0.8rem; font-size: 0.73rem; color: var(--text-secondary); }
+    .chip {
+      display: inline-block;
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      padding: 0.18rem 0.45rem;
+      border-radius: 999px;
+      margin-top: 0.45rem;
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      background: rgba(15, 23, 42, 0.64);
+    }
+    .side-right .floating-card:nth-child(2),
+    .side-left .floating-card:nth-child(3) { animation-delay: .8s; }
+    .side-right .floating-card:nth-child(3),
+    .side-left .floating-card:nth-child(2) { animation-delay: 1.4s; }
+    @keyframes float {
+      0%,100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 1080px) {
+      .page { grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
+      .side { grid-template-columns: repeat(2, minmax(150px, 1fr)); }
+      .login-card { order: -1; }
+      .brand { flex-direction: column; align-items: center; text-align: center; }
+      .brand-text .sub { max-width: 100%; }
+    }
+    @media (max-width: 650px) {
+      .side { grid-template-columns: 1fr; }
+      .logo-wrap { width: 72px; height: 72px; min-width: 72px; }
+      .brand-text h1 { font-size: 1.35rem; }
+      .login-card { padding: 1.3rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="side side-left">
+      <article class="floating-card">
+        <h4>Smart Notes</h4>
+        <p>Capture ideas, class notes, and action items with instant organization.</p>
+      </article>
+      <article class="floating-card">
+        <h4>Task Management</h4>
+        <p>Track what matters and keep daily execution in one focused view.</p>
+      </article>
+      <article class="floating-card">
+        <h4>File Storage</h4>
+        <p>Secure folders with quick retrieval for docs, images, and references.</p>
+      </article>
+      <article class="floating-card">
+        <h4>NotePilot AI</h4>
+        <p>Summaries, structured insights, and productivity guidance in seconds.</p>
+      </article>
+    </section>
+
+    <section class="login-card">
+      <div class="brand">
+        <div class="logo-wrap">
+          <img src="assets/images/logo.png" alt="Note - Files Logo" class="logo">
+        </div>
+        <div class="brand-text">
+          <h1>Welcome to Note - Files</h1>
+          <p class="sub">Professional workspace access</p>
+        </div>
+      </div>
+
+      <form id="authForm" novalidate>
+        <div class="field">
+          <label class="label" for="username">Username</label>
+          <div class="input-wrap">
+            <input type="text" id="username" autocomplete="username" placeholder="Enter username" required>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="password">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="password" autocomplete="current-password" placeholder="Enter password" required>
+            <button type="button" class="toggle" id="togglePassword" aria-label="Show password">Show</button>
+          </div>
+        </div>
+
+        <p id="authMessage" class="message" role="status" aria-live="polite"></p>
+
+        <div class="actions">
+          <button type="button" id="loginBtn" class="btn btn-primary">Sign In</button>
+          <button type="button" id="signupBtn" class="btn btn-secondary">Create Account</button>
+        </div>
+      </form>
+
+      <p class="hint">Username rules: 3-24 chars, letters/numbers/`_`/`-` only.</p>
+      <span class="chip">Session auto-remember enabled</span>
+    </section>
+
+    <section class="side side-right">
+      <article class="dashboard-preview">
+        <div class="dash-head">Mini Dashboard <span class="status"></span></div>
+        <div class="dash-grid">
+          <div class="tile">Folder Preview</div>
+          <div class="tile">AI Summary</div>
+          <div class="tile">Notes</div>
+          <div class="tile">Tasks</div>
+        </div>
+      </article>
+      <article class="mini-card">
+        <h4>Folder Cards</h4>
+        <p>School, Coding, Photos, Important</p>
+      </article>
+      <article class="mini-card">
+        <h4>AI Preview</h4>
+        <p>Summarize uploaded notes into concise insights instantly.</p>
+      </article>
+      <article class="mini-card">
+        <h4>Notes + Tasks Preview</h4>
+        <p>Recent page snapshots and completion-ready action queue.</p>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const USER_STORE_KEY = "notepilot:auth:accounts:v1";
+    const SESSION_KEY = "notepilot:auth:active-user:v1";
+    const USER_DATA_PREFIX = "notepilot:userdata:";
+    const LEGACY_USERNAME_KEY = "username";
+    const LEGACY_PASSWORD_KEY = "password";
+
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
+    const togglePassword = document.getElementById("togglePassword");
+    const authMessage = document.getElementById("authMessage");
+
+    function readAccounts() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(USER_STORE_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function writeAccounts(accounts) {
+      localStorage.setItem(USER_STORE_KEY, JSON.stringify(accounts));
+    }
+
+    function normalizeUsername(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function validateUsername(value) {
+      const raw = String(value || "").trim();
+      if (raw.length < 3 || raw.length > 24) {
+        return "Username must be 3 to 24 characters.";
+      }
+      if (!/^[a-zA-Z0-9_-]+$/.test(raw)) {
+        return "Use only letters, numbers, underscore, or hyphen.";
+      }
+      return "";
+    }
+
+    function setMessage(text, ok = false) {
+      authMessage.textContent = text;
+      authMessage.classList.toggle("ok", ok);
+    }
+
+    function ensureUserDataBucket(username) {
+      const key = `${USER_DATA_PREFIX}${normalizeUsername(username)}`;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, JSON.stringify({ createdAt: Date.now() }));
+      }
+    }
+
+    function startSession(username) {
+      localStorage.setItem(SESSION_KEY, username);
+      localStorage.setItem(LEGACY_USERNAME_KEY, username);
+      ensureUserDataBucket(username);
+    }
+
+    function migrateLegacyAccount() {
+      const legacyUser = String(localStorage.getItem(LEGACY_USERNAME_KEY) || "").trim();
+      const legacyPass = String(localStorage.getItem(LEGACY_PASSWORD_KEY) || "");
+
+      if (!legacyUser || !legacyPass) return;
+
+      const usernameIssue = validateUsername(legacyUser);
+      if (usernameIssue) return;
+
+      const accounts = readAccounts();
+      const normalized = normalizeUsername(legacyUser);
+      const exists = accounts.some((account) => normalizeUsername(account.username) === normalized);
+
+      if (!exists) {
+        accounts.push({
+          username: legacyUser,
+          password: legacyPass,
+          createdAt: Date.now(),
+          migratedFromLegacy: true
+        });
+        writeAccounts(accounts);
+      }
+      ensureUserDataBucket(legacyUser);
+    }
+
+    function tryAutoRedirect() {
+      const active = localStorage.getItem(SESSION_KEY);
+      if (active) {
+        localStorage.setItem(LEGACY_USERNAME_KEY, active);
+        window.location.href = "index.html";
+      }
+    }
+
+    function createAccount() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      const usernameIssue = validateUsername(username);
+      if (usernameIssue) {
+        setMessage(usernameIssue);
+        return;
+      }
+      if (password.length < 4) {
+        setMessage("Password must be at least 4 characters.");
+        return;
+      }
+
+      const accounts = readAccounts();
+      const normalized = normalizeUsername(username);
+      const exists = accounts.some((account) => normalizeUsername(account.username) === normalized);
+      if (exists) {
+        setMessage("That username already exists. Try signing in.");
+        return;
+      }
+
+      accounts.push({ username, password, createdAt: Date.now() });
+      writeAccounts(accounts);
+
+      localStorage.setItem(LEGACY_USERNAME_KEY, username);
+      localStorage.setItem(LEGACY_PASSWORD_KEY, password);
+      startSession(username);
+
+      setMessage("Account created. Redirecting...", true);
+      setTimeout(() => { window.location.href = "index.html"; }, 420);
+    }
+
+    function signIn() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      const usernameIssue = validateUsername(username);
+      if (usernameIssue) {
+        setMessage(usernameIssue);
+        return;
+      }
+      if (!password) {
+        setMessage("Enter your password.");
+        return;
+      }
+
+      const accounts = readAccounts();
+      const normalized = normalizeUsername(username);
+      const match = accounts.find((account) => normalizeUsername(account.username) === normalized && account.password === password);
+
+      if (!match) {
+        setMessage("Invalid username or password.");
+        return;
+      }
+
+      startSession(match.username);
+      setMessage("Sign in successful. Redirecting...", true);
+      setTimeout(() => { window.location.href = "index.html"; }, 350);
+    }
+
+    togglePassword.addEventListener("click", () => {
+      const showing = passwordInput.type === "text";
+      passwordInput.type = showing ? "password" : "text";
+      togglePassword.textContent = showing ? "Show" : "Hide";
+      togglePassword.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+    });
+
+    loginBtn.addEventListener("click", signIn);
+    signupBtn.addEventListener("click", createAccount);
+
+    document.getElementById("authForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      signIn();
+    });
+
+    passwordInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        signIn();
+      }
+    });
+
+    migrateLegacyAccount();
+    tryAutoRedirect();
+  </script>
+</body>
+</html>

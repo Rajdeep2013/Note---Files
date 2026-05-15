@@ -1,3 +1,4 @@
+console.log("SCRIPT WORKING");
 /* ---------------- USERNAME ---------------- */
 
 const AUTH_SESSION_KEY =
@@ -1207,9 +1208,10 @@ const NavigationSystem = (() => {
     dashboardHeader: document.querySelector(".dashboard-header"),
     dashboardView: document.getElementById("dashboardView"),
     folderView: document.getElementById("folderView"),
+    filesSection: document.getElementById("filesSection"),
     sections: {
       dashboard: document.getElementById("dashboardView"),
-      files: document.getElementById("foldersSection"),
+      files: document.getElementById("filesSection"),
       tasks: document.getElementById("tasksSection"),
       notes: document.getElementById("notesSection"),
       ai: document.getElementById("aiSection")
@@ -1356,12 +1358,28 @@ const NavigationSystem = (() => {
 
   function scrollToSection(target) {
 
+    if(target === "files") {
+      // Special handling for Files section - show it instead of scrolling
+      if(elements.dashboardView && elements.filesSection) {
+        elements.dashboardView.classList.add("hidden");
+        elements.folderView.classList.add("hidden");
+        elements.filesSection.classList.remove("hidden");
+        animateViewIn(elements.filesSection);
+      }
+      return;
+    }
+
     if(target === "files" && FolderSystem.isFolderOpen()) {
       return;
     }
 
-    if(elements.dashboardView.classList.contains("hidden")) {
+    if(elements.dashboardView && elements.filesSection) {
       elements.dashboardView.classList.remove("hidden");
+      elements.filesSection.classList.add("hidden");
+      animateViewIn(elements.dashboardView);
+    }
+
+    if(elements.folderView?.classList.contains("hidden")) {
       elements.folderView.classList.add("hidden");
     }
 
@@ -1394,6 +1412,18 @@ const NavigationSystem = (() => {
     if(window.innerWidth <= 980) {
       elements.sidebar.classList.remove("open");
     }
+
+  }
+
+  function animateViewIn(element) {
+
+    if(!element) return;
+
+    element.classList.remove("view-enter");
+
+    requestAnimationFrame(() => {
+      element.classList.add("view-enter");
+    });
 
   }
 
@@ -1969,3 +1999,296 @@ if(summarizeBtn) {
 
 }
 
+/* ===== FILE MANAGER INITIALIZATION ===== */
+
+// Initialize IndexedDB and File System managers after page loads
+(async () => {
+  try {
+    // Initialize IndexedDB
+    fsManager = new FileSystemAccessManager(idbManager);
+    await idbManager.init();
+    console.log('IndexedDB initialized');
+
+    // Try to restore root directory on page load
+    const restoredHandle = await fsManager.restoreRootDirectory();
+    if (restoredHandle) {
+      console.log('Root directory restored from IndexedDB');
+      // Load folder structure if root was restored
+      const tempFileManager = new FileManager(idbManager, fsManager);
+      await tempFileManager.loadFolderStructure();
+      fileManager = tempFileManager;
+    } else {
+      console.log('No root directory found. User will need to select one.');
+      fileManager = new FileManager(idbManager, fsManager);
+    }
+
+    // Setup modal close button
+    const deleteFileBtn = document.getElementById('deleteFileBtn');
+    const openFileBtn = document.getElementById('openFileBtn');
+    const modal = document.getElementById('filePreviewModal');
+
+    if (deleteFileBtn) {
+      deleteFileBtn.addEventListener('click', async () => {
+        if (!modal || !modal.dataset.currentFile) return;
+        try {
+          const fileData = JSON.parse(modal.dataset.currentFile);
+          const folderInfo = fileManager.folderHandles.get(fileManager.currentFolderId);
+          if (folderInfo) {
+            await fileManager.deleteFile(fileData, folderInfo.handle);
+          }
+        } catch (error) {
+          console.error('Error deleting file:', error);
+        }
+      });
+    }
+
+    if (openFileBtn) {
+      openFileBtn.addEventListener('click', async () => {
+        if (!modal || !modal.dataset.currentFile) return;
+        try {
+          const fileData = JSON.parse(modal.dataset.currentFile);
+          await fileManager.openFile(fileData);
+        } catch (error) {
+          console.error('Error opening file:', error);
+          fileManager.showNotification('Error opening file', 'error');
+        }
+      });
+    }
+
+    console.log('File manager initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize file manager:', error);
+  }
+})();
+/* =========================
+   NOTEPILOT AI FILE SYSTEM
+========================= */
+
+const aiFileInput = document.getElementById("aiFileInput");
+const aiPrompt = document.getElementById("aiPrompt");
+const chatArea = document.getElementById("chatArea");
+const sendAiBtn = document.getElementById("sendAiBtn");
+
+let uploadedFileText = "";
+
+/* READ FILE */
+aiFileInput.addEventListener("change", async (e) => {
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    const fileType = file.type;
+
+    /* TEXT FILES */
+    if (
+        fileType.includes("text") ||
+        file.name.endsWith(".txt")
+    ) {
+
+        const text = await file.text();
+
+        uploadedFileText = text;
+
+        addAiMessage(
+            "📄 File uploaded successfully: " + file.name
+        );
+    }
+
+    /* IMAGE FILES */
+    else if (fileType.includes("image")) {
+
+        uploadedFileText =
+            "This is an image file named " + file.name;
+
+        addAiMessage(
+            "🖼 Image uploaded: " + file.name
+        );
+    }
+
+    /* PDF FILES */
+    else if (fileType.includes("pdf")) {
+
+        uploadedFileText =
+            "PDF uploaded: " + file.name;
+
+        addAiMessage(
+            "📘 PDF uploaded successfully: " + file.name
+        );
+    }
+
+    else {
+
+        addAiMessage(
+            "❌ Unsupported file type."
+        );
+    }
+});
+
+/* SEND BUTTON */
+sendAiBtn.addEventListener("click", () => {
+
+    const userText = aiPrompt.value.trim();
+
+    if (!userText && !uploadedFileText) return;
+
+    addUserMessage(userText);
+
+    /* SIMPLE SUMMARY SYSTEM */
+
+    let summary = "";
+
+    if (uploadedFileText.length > 0) {
+
+        summary =
+            generateSummary(uploadedFileText);
+    }
+
+    else {
+
+        summary =
+            "Please upload a file first.";
+    }
+
+    setTimeout(() => {
+
+        addAiMessage(summary);
+
+    }, 800);
+
+    aiPrompt.value = "";
+});
+
+/* AI MESSAGE */
+function addAiMessage(text) {
+
+    const div = document.createElement("div");
+
+    div.className = "ai-message";
+
+    div.innerHTML = text;
+
+    chatArea.appendChild(div);
+
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/* USER MESSAGE */
+function addUserMessage(text) {
+
+    const div = document.createElement("div");
+
+    div.className = "user-message";
+
+    div.innerHTML = text;
+
+    chatArea.appendChild(div);
+
+    chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/* SIMPLE SUMMARY FUNCTION */
+function generateSummary(text) {
+
+    if (!text || text.length < 20) {
+
+        return "⚠ Not enough content to summarize.";
+    }
+
+    /* SPLIT INTO SENTENCES */
+    const sentences = text.split(".");
+
+    /* TAKE IMPORTANT PARTS */
+    let shortSummary =
+        sentences.slice(0, 5).join(". ");
+
+    return `
+        <strong>📌 Summary:</strong><br><br>
+        ${shortSummary}.
+    `;
+}
+/* =========================
+   FIX FOLDER OPENING
+========================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const folders = document.querySelectorAll(".folder-card");
+
+    folders.forEach(folder => {
+
+        folder.addEventListener("click", () => {
+
+            /* REMOVE ACTIVE CLASS */
+            folders.forEach(f => {
+                f.classList.remove("active-folder");
+            });
+
+            /* ACTIVATE CLICKED FOLDER */
+            folder.classList.add("active-folder");
+
+            /* GET FOLDER NAME */
+            const folderName =
+                folder.querySelector("h3")?.innerText
+                || "Folder";
+
+            /* FIND FILE AREA */
+            const fileArea =
+                document.getElementById("folderFiles");
+
+            if (fileArea) {
+
+                fileArea.innerHTML = `
+                    <div class="opened-folder">
+                        <h2>📂 ${folderName}</h2>
+                        <p>Folder opened successfully.</p>
+                    </div>
+                `;
+            }
+
+        });
+
+    });
+
+});
+/* FIX FOLDER OPENING */
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const folders = document.querySelectorAll(".folder-card-content");
+
+    folders.forEach(folder => {
+
+        folder.addEventListener("click", () => {
+
+            /* REMOVE ACTIVE STATE */
+            folders.forEach(f => {
+                f.classList.remove("active-folder");
+            });
+
+            /* ACTIVATE CLICKED */
+            folder.classList.add("active-folder");
+
+            /* GET FOLDER NAME */
+            const folderName =
+                folder.innerText.split("\n")[0];
+
+            /* FIND FILE DISPLAY AREA */
+            const folderFiles =
+                document.getElementById("folderFiles");
+
+            if(folderFiles){
+
+                folderFiles.innerHTML = `
+                    <div class="opened-folder">
+                        <h2>📂 ${folderName}</h2>
+                        <p>Folder opened successfully.</p>
+                    </div>
+                `;
+            }
+
+        });
+
+    });
+
+});

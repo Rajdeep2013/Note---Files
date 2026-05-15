@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Manager Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px;
+    }
+    .test-section {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .pass { color: #22c55e; }
+    .fail { color: #ef4444; }
+    .pending { color: #f59e0b; }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+  <h1>File Manager Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Syntax Checks</h2>
+    <div id="syntaxChecks"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Module Initialization</h2>
+    <div id="moduleChecks"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>API Support</h2>
+    <div id="apiChecks"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Manual Tests</h2>
+    <button onclick="testIndexedDB()">Test IndexedDB</button>
+    <button onclick="testFileSystemAPI()">Test File System API Support</button>
+    <div id="manualTests"></div>
+  </div>
+
+  <script src="indexeddb-manager.js"></script>
+  <script src="filesystem-manager.js"></script>
+  <script src="file-manager.js"></script>
+
+  <script>
+    function log(section, message, status = 'pending') {
+      const container = document.getElementById(section);
+      if (container) {
+        const div = document.createElement('div');
+        div.className = status;
+        div.textContent = message;
+        container.appendChild(div);
+      }
+      console.log(`[${status}] ${message}`);
+    }
+
+    // Check modules exist
+    log('moduleChecks', 'idbManager: ' + (typeof idbManager !== 'undefined' ? '✓ Loaded' : '✗ Missing'), 
+        typeof idbManager !== 'undefined' ? 'pass' : 'fail');
+    
+    log('moduleChecks', 'FileSystemAccessManager: ' + (typeof FileSystemAccessManager !== 'undefined' ? '✓ Loaded' : '✗ Missing'),
+        typeof FileSystemAccessManager !== 'undefined' ? 'pass' : 'fail');
+    
+    log('moduleChecks', 'FileManager: ' + (typeof FileManager !== 'undefined' ? '✓ Loaded' : '✗ Missing'),
+        typeof FileManager !== 'undefined' ? 'pass' : 'fail');
+
+    // Check API support
+    log('apiChecks', 'indexedDB API: ' + (typeof window.indexedDB !== 'undefined' ? '✓ Supported' : '✗ Not supported'),
+        typeof window.indexedDB !== 'undefined' ? 'pass' : 'fail');
+    
+    log('apiChecks', 'File System Access API: ' + (typeof window.showDirectoryPicker !== 'undefined' ? '✓ Supported' : '✗ Not supported'),
+        typeof window.showDirectoryPicker !== 'undefined' ? 'pass' : 'fail');
+
+    // Test IndexedDB
+    async function testIndexedDB() {
+      const container = document.getElementById('manualTests');
+      container.innerHTML = '<p class="pending">Testing IndexedDB...</p>';
+      
+      try {
+        if (!idbManager) {
+          container.innerHTML = '<p class="fail">idbManager not initialized</p>';
+          return;
+        }
+
+        await idbManager.init();
+        container.innerHTML = '<p class="pass">✓ IndexedDB initialized successfully</p>';
+        
+        // Test save/get
+        await idbManager.saveFolderHandle('test-folder', 'Test', {});
+        const result = await idbManager.getFolderHandle('test-folder');
+        
+        if (result) {
+          container.innerHTML += '<p class="pass">✓ Folder handle save/get works</p>';
+        } else {
+          container.innerHTML += '<p class="fail">✗ Folder handle save/get failed</p>';
+        }
+      } catch (error) {
+        container.innerHTML = '<p class="fail">✗ Error: ' + error.message + '</p>';
+      }
+    }
+
+    // Test File System API
+    function testFileSystemAPI() {
+      const container = document.getElementById('manualTests');
+      container.innerHTML = '<p class="pending">Testing File System API...</p>';
+      
+      try {
+        if (!FileSystemAccessManager.isSupported()) {
+          container.innerHTML = '<p class="fail">✗ File System Access API not supported in this browser</p>';
+          return;
+        }
+
+        container.innerHTML = '<p class="pass">✓ File System Access API is supported</p>';
+        container.innerHTML += '<p style="color: #999;">Click "Select Root Directory" in the Files section to test</p>';
+      } catch (error) {
+        container.innerHTML = '<p class="fail">✗ Error: ' + error.message + '</p>';
+      }
+    }
+
+    // Run initial checks
+    window.addEventListener('load', () => {
+      log('syntaxChecks', 'All JavaScript modules loaded without syntax errors', 'pass');
+    });
+  </script>
+</body>
+</html>

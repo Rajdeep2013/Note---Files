@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Note - Files</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="files-manager.css">
 </head>
 
 <body class="dashboard-body">
@@ -122,6 +123,29 @@
       </div>
       <div class="header-content">
         <h1 id="welcomeText">Welcome</h1>
+        <div class="stats-grid">
+
+    <div class="stat-card">
+        <h3>📁 Total Files</h3>
+        <p id="totalFiles">12</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>📝 Notes</h3>
+        <p id="totalNotes">8</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>✅ Tasks Done</h3>
+        <p id="completedTasks">5</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>🤖 AI Summaries</h3>
+        <p id="aiSummaries">14</p>
+    </div>
+
+</div>
         <p>Your personal productivity workspace</p>
       </div>
     </header>
@@ -292,9 +316,65 @@
         </div>
       </div>
     </section>
+
+    <!-- File Manager Section -->
+    <section id="filesSection" class="files-section hidden">
+      <div class="files-header">
+        <div class="files-header-left">
+          <h1>File Manager</h1>
+          <p>Local file storage powered by File System Access API</p>
+        </div>
+        <div class="files-header-actions">
+          <button id="selectRootBtn" class="btn-primary">Select Folder</button>
+          <button id="permissionStatusBtn" class="btn-secondary">Permission Status</button>
+        </div>
+      </div>
+
+      <!-- Recent Files -->
+      <div id="recentFilesContainer" class="files-panel hidden">
+        <h2>Recent Files</h2>
+        <div id="recentFilesList" class="files-grid"></div>
+      </div>
+
+      <!-- Folder Contents -->
+      <div id="folderContentsContainer" class="files-panel hidden">
+        <div class="folder-header">
+          <h2 id="currentFolderName">Select a folder</h2>
+          <button id="refreshFolderBtn" class="btn-secondary">Refresh</button>
+        </div>
+        <div id="folderFilesList" class="files-grid"></div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <polyline points="13 2 13 9 20 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+        <h3>No files yet</h3>
+        <p>Select a folder to start managing your files locally</p>
+      </div>
+    </section>
   </main>
 
+  <!-- Modal for file preview -->
+  <div id="filePreviewModal" class="modal hidden">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content">
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+      <div id="previewContainer" class="preview-container"></div>
+      <div class="modal-actions">
+        <button id="deleteFileBtn" class="btn-danger">Delete File</button>
+        <button id="openFileBtn" class="btn-primary">Open File</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="indexeddb-manager.js"></script>
+  <script src="filesystem-manager.js"></script>
+  <script src="file-manager.js"></script>
   <script src="script.js"></script>
+
 </body>
 
 </html>

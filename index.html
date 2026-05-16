@@ -128,35 +128,19 @@
 
     <section id="dashboardView" class="dashboard-section">
       <div class="folders-container dashboard-panel" id="foldersSection">
-        <h2 class="section-title">Your Folders</h2>
-        <div class="folders-grid">
-          <div class="folder-card" data-folder="school">
-            <div class="folder-card-content">
-              <div class="folder-icon-wrapper">
-                <svg class="folder-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="folder-info">
-                <h3>School</h3>
-                <p>Lecture notes and assignments</p>
-              </div>
-            </div>
+        <div class="folder-panel-header">
+          <div>
+            <h2 class="section-title">Your Folders</h2>
+            <p class="folder-panel-subtitle">Create nested workspaces and browse your folder hierarchy.</p>
           </div>
+          <button id="newRootFolderBtn" class="action-btn">New Folder</button>
+        </div>
 
-          <div class="folder-card" data-folder="coding">
-            <div class="folder-card-content">
-              <div class="folder-icon-wrapper">
-                <svg class="folder-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                </svg>
-              </div>
-              <div class="folder-info">
-                <h3>Coding</h3>
-                <p>Projects, snippets and references</p>
-              </div>
-            </div>
-          </div>
+        <div id="folderTreeSection" class="folder-tree-section">
+          <div id="folderTree" class="folder-tree"></div>
+        </div>
+
+        <div id="dashboardFoldersGrid" class="folders-grid"></div>
 
           <div class="folder-card" data-folder="photos">
             <div class="folder-card-content">
@@ -271,13 +255,22 @@
     <section id="folderView" class="folder-view hidden">
       <div class="folder-view-header">
         <button id="backBtn" class="back-btn">Back</button>
-        <h2 id="folderTitle">Folder</h2>
+        <div class="folder-view-header-group">
+          <h2 id="folderTitle">Folder</h2>
+          <div id="folderBreadcrumbs" class="folder-breadcrumbs">Root</div>
+        </div>
+        <button id="newSubfolderBtn" class="action-btn">New Subfolder</button>
       </div>
 
       <div class="folder-view-content">
         <div class="folder-actions">
           <button id="addNoteBtn" class="action-btn">Add Note</button>
           <button id="addFileBtn" class="action-btn">Add File</button>
+        </div>
+
+        <div class="folder-section">
+          <h3>Subfolders</h3>
+          <div id="subfolderGrid" class="folders-grid"></div>
         </div>
 
         <div class="folder-section">
@@ -292,6 +285,23 @@
         </div>
       </div>
     </section>
+
+    <div id="filePreviewModal" class="preview-modal hidden" aria-hidden="true">
+      <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="preview-header">
+          <div>
+            <h3 id="previewTitle" class="preview-title">File preview</h3>
+            <p id="previewSubtitle" class="preview-subtitle">Select a file to view</p>
+          </div>
+          <button id="previewCloseBtn" type="button" class="preview-close" aria-label="Close preview">×</button>
+        </div>
+        <div class="preview-body">
+          <div id="previewLoader" class="preview-loader hidden">Loading file…</div>
+          <div id="previewError" class="preview-error hidden"></div>
+          <div id="previewContent" class="preview-content"></div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="script.js"></script>

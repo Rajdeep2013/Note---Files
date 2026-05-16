@@ -62,6 +62,108 @@ function safeParseStoredArray(value) {
 
 }
 
+const FileDatabase = (() => {
+
+  const DB_NAME =
+    `notepilot-files-db:${ACTIVE_USER_SLUG}`;
+
+  const STORE_NAME =
+    "fileRecords";
+
+  let dbPromise = null;
+
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      const request =
+        indexedDB.open(DB_NAME, 1);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+
+        if(!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, {
+            keyPath: "key"
+          });
+        }
+      };
+
+      request.onsuccess = (event) => {
+        resolve(event.target.result);
+      };
+
+      request.onerror = () => {
+        reject(request.error);
+      };
+    });
+  }
+
+  async function getDb() {
+    if(!dbPromise) {
+      dbPromise =
+        openDatabase();
+    }
+    return dbPromise;
+  }
+
+  async function saveFileData(key, record) {
+    const db =
+      await getDb();
+
+    return new Promise((resolve, reject) => {
+      const tx =
+        db.transaction(STORE_NAME, "readwrite");
+
+      tx.objectStore(STORE_NAME).put({
+        key,
+        ...record
+      });
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  async function getFileData(key) {
+    const db =
+      await getDb();
+
+    return new Promise((resolve, reject) => {
+      const tx =
+        db.transaction(STORE_NAME, "readonly");
+      const request =
+        tx.objectStore(STORE_NAME).get(key);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  async function deleteFileData(key) {
+    const db =
+      await getDb();
+
+    return new Promise((resolve, reject) => {
+      const tx =
+        db.transaction(STORE_NAME, "readwrite");
+
+      tx.objectStore(STORE_NAME).delete(key);
+
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  }
+
+  return {
+    saveFileData,
+    getFileData,
+    deleteFileData
+  };
+
+})();
+
 const welcomeText =
   document.getElementById("welcomeText");
 
@@ -508,7 +610,14 @@ const FolderSystem = (() => {
     notesList: document.getElementById("notesList"),
     addFileBtn: document.getElementById("addFileBtn"),
     fileInput: document.getElementById("fileInput"),
-    filesList: document.getElementById("filesList")
+    filesList: document.getElementById("filesList"),
+    previewModal: document.getElementById("filePreviewModal"),
+    previewTitle: document.getElementById("previewTitle"),
+    previewSubtitle: document.getElementById("previewSubtitle"),
+    previewCloseBtn: document.getElementById("previewCloseBtn"),
+    previewLoader: document.getElementById("previewLoader"),
+    previewError: document.getElementById("previewError"),
+    previewContent: document.getElementById("previewContent")
   };
 
   const state = {
@@ -553,11 +662,7 @@ const FolderSystem = (() => {
     }
 
     if(elements.addFileBtn) {
-      elements.addFileBtn.addEventListener("click", () => {
-        if(elements.fileInput) {
-          elements.fileInput.click();
-        }
-      });
+      elements.addFileBtn.addEventListener("click", handleChooseFile);
     }
 
     if(elements.fileInput) {
@@ -593,22 +698,36 @@ const FolderSystem = (() => {
     }
 
     if(elements.filesList) {
-      elements.filesList.addEventListener("click", (event) => {
-
-        const deleteBtn =
-          event.target.closest(".file-delete-btn");
-
-        if(!deleteBtn) return;
-
-        const index =
-          Number(deleteBtn.dataset.index);
-
-        if(Number.isNaN(index)) return;
-
-        deleteFile(index);
-
+      elements.filesList.addEventListener("click", handleFilesListClick);
+      elements.filesList.addEventListener("keydown", (event) => {
+        if(event.key !== "Enter" && event.key !== " ") return;
+        const card = event.target.closest(".file-card");
+        if(!card || !elements.filesList.contains(card)) return;
+        event.preventDefault();
+        const index = Number(card.dataset.index);
+        if(!Number.isNaN(index)) {
+          openFileAtIndex(index);
+        }
       });
     }
+
+    if(elements.previewCloseBtn) {
+      elements.previewCloseBtn.addEventListener("click", closeFilePreview);
+    }
+
+    if(elements.previewModal) {
+      elements.previewModal.addEventListener("click", (event) => {
+        if(event.target === elements.previewModal) {
+          closeFilePreview();
+        }
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if(event.key === "Escape" && elements.previewModal && !elements.previewModal.classList.contains("hidden")) {
+        closeFilePreview();
+      }
+    });
 
   }
 
@@ -912,46 +1031,33 @@ const FolderSystem = (() => {
 
     if(!file) return;
 
-    const files =
-      getFilesForFolder(state.activeFolderId);
-
-    const previewDataUrl =
-      await getFilePreviewDataUrl(file);
-
-    files.push({
-      name: file.name,
-      type: file.type || "",
-      size: file.size || 0,
-      extension: getFileExtension(file.name),
-      uploadedAt: Date.now(),
-      previewDataUrl: previewDataUrl || ""
-    });
-
-    saveFilesForFolder(state.activeFolderId, files);
-
-    elements.fileInput.value = "";
-
-    renderFiles(files);
+    await handleFileUpload(file);
 
   }
 
-  function deleteFile(index) {
+  async function deleteFile(index) {
 
     if(!state.activeFolderId || index < 0) return;
 
     const files =
       getFilesForFolder(state.activeFolderId);
 
-    if(!files[index]) return;
+    const file = files[index];
+
+    if(!file) return;
 
     const shouldDelete =
-      confirm(`Delete "${files[index].name}" from ${formatFolderTitle(state.activeFolderId)}?`);
+      confirm(`Delete "${file.name}" from ${formatFolderTitle(state.activeFolderId)}?`);
 
     if(!shouldDelete) return;
 
     files.splice(index, 1);
 
     saveFilesForFolder(state.activeFolderId, files);
+
+    if(file.fileKey) {
+      FileDatabase.deleteFileData(file.fileKey).catch(() => {});
+    }
 
     renderFiles(files);
 
@@ -1023,7 +1129,7 @@ const FolderSystem = (() => {
       item.className = "file-item";
 
       item.innerHTML = `
-        <div class="file-card">
+        <div class="file-card" data-index="${index}" role="button" tabindex="0">
           <div class="file-preview ${file.previewDataUrl ? "has-preview" : ""}">
             ${
               file.previewDataUrl
@@ -1052,7 +1158,10 @@ const FolderSystem = (() => {
   function normalizeFileEntry(entry) {
 
     if(typeof entry === "string") {
+      const id = generateId();
       return {
+        id,
+        fileKey: `notepilot:file:${ACTIVE_USER_SLUG}:${id}`,
         name: entry,
         type: "",
         size: 0,
@@ -1062,7 +1171,11 @@ const FolderSystem = (() => {
       };
     }
 
+    const id = entry.id || generateId();
+
     return {
+      id,
+      fileKey: entry.fileKey || `notepilot:file:${ACTIVE_USER_SLUG}:${id}`,
       name: entry.name || "Untitled file",
       type: entry.type || "",
       size: Number(entry.size) || 0,
@@ -1184,6 +1297,290 @@ const FolderSystem = (() => {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
 
+  }
+
+  function generateId() {
+    return `file-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+  }
+
+  function getFileStorageKey(folderId, fileId) {
+    return `notepilot:file:${ACTIVE_USER_SLUG}:${folderId}:${fileId}`;
+  }
+
+  async function handleChooseFile() {
+    if(!state.activeFolderId) return;
+
+    if(window.showOpenFilePicker) {
+      try {
+        const [handle] =
+          await window.showOpenFilePicker({
+            multiple: false,
+            types: [
+              {
+                description: "All files",
+                accept: {
+                  "image/*": [
+                    ".png",
+                    ".jpg",
+                    ".jpeg",
+                    ".gif",
+                    ".webp",
+                    ".svg"
+                  ],
+                  "application/pdf": [".pdf"],
+                  "text/plain": [".txt"],
+                  "application/*": [".doc", ".docx", ".rtf"]
+                }
+              }
+            ]
+          });
+
+        const file =
+          await handle.getFile();
+
+        await handleFileUpload(file, handle);
+        return;
+      } catch (error) {
+        if(error.name !== "AbortError") {
+          console.warn("File picker error:", error);
+        }
+      }
+    }
+
+    if(elements.fileInput) {
+      elements.fileInput.click();
+    }
+  }
+
+  async function handleFileUpload(file, fileHandle = null) {
+    if(!state.activeFolderId || !file) return;
+
+    const files =
+      getFilesForFolder(state.activeFolderId);
+
+    const id =
+      generateId();
+
+    const fileKey =
+      getFileStorageKey(state.activeFolderId, id);
+
+    const previewDataUrl =
+      await getFilePreviewDataUrl(file);
+
+    const entry = {
+      id,
+      fileKey,
+      name: file.name,
+      type: file.type || "",
+      size: file.size || 0,
+      extension: getFileExtension(file.name),
+      uploadedAt: Date.now(),
+      previewDataUrl
+    };
+
+    files.push(entry);
+
+    saveFilesForFolder(state.activeFolderId, files);
+
+    try {
+      await FileDatabase.saveFileData(fileKey, {
+        blob: file,
+        handle: fileHandle || null
+      });
+    } catch (error) {
+      console.warn("Unable to persist file to IndexedDB:", error);
+    }
+
+    if(elements.fileInput) {
+      elements.fileInput.value = "";
+    }
+
+    renderFiles(files);
+  }
+
+  async function getStoredFileBlob(fileKey) {
+    if(!fileKey) return null;
+
+    try {
+      const record =
+        await FileDatabase.getFileData(fileKey);
+
+      if(!record) return null;
+      if(record.blob instanceof Blob) {
+        return record.blob;
+      }
+      if(record.handle && typeof record.handle.getFile === "function") {
+        return await record.handle.getFile();
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  function handleFilesListClick(event) {
+    const deleteBtn =
+      event.target.closest(".file-delete-btn");
+
+    if(deleteBtn) {
+      const index =
+        Number(deleteBtn.dataset.index);
+
+      if(!Number.isNaN(index)) {
+        deleteFile(index);
+      }
+
+      return;
+    }
+
+    const card =
+      event.target.closest(".file-card");
+
+    if(!card) return;
+
+    const index =
+      Number(card.dataset.index);
+
+    if(Number.isNaN(index)) return;
+
+    openFileAtIndex(index);
+  }
+
+  function openFileAtIndex(index) {
+    const files =
+      getFilesForFolder(state.activeFolderId);
+
+    if(!files[index]) return;
+
+    openFile(files[index]);
+  }
+
+  async function openFile(fileEntry) {
+    if(!elements.previewModal || !elements.previewContent) return;
+
+    showPreviewModal(true);
+    setPreviewLoading(true);
+
+    if(elements.previewTitle) {
+      elements.previewTitle.textContent =
+        fileEntry.name || "Preview";
+    }
+
+    if(elements.previewSubtitle) {
+      elements.previewSubtitle.textContent =
+        formatFileLabel(fileEntry);
+    }
+
+    if(elements.previewError) {
+      elements.previewError.classList.add("hidden");
+      elements.previewError.textContent = "";
+    }
+
+    elements.previewContent.innerHTML = "";
+
+    const blob =
+      await getStoredFileBlob(fileEntry.fileKey);
+
+    if(!blob) {
+      setPreviewLoading(false);
+
+      if(elements.previewError) {
+        elements.previewError.textContent =
+          "Unable to open this file. The file data is missing or permission has expired.";
+        elements.previewError.classList.remove("hidden");
+      }
+
+      return;
+    }
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const isImage =
+      fileEntry.type.startsWith("image/") ||
+      ["png","jpg","jpeg","gif","webp","svg"].includes(fileEntry.extension);
+
+    const isPdf =
+      fileEntry.type === "application/pdf" ||
+      fileEntry.extension === "pdf";
+
+    const isText =
+      fileEntry.type.startsWith("text/") ||
+      ["txt","md","json","csv","html","css","js"].includes(fileEntry.extension);
+
+    if(isImage) {
+      elements.previewContent.innerHTML =
+        `<img src="${url}" alt="${escapeText(fileEntry.name)}">`;
+    } else if(isPdf) {
+      elements.previewContent.innerHTML =
+        `<iframe src="${url}" frameborder="0" sandbox="allow-same-origin allow-scripts"></iframe>`;
+    } else if(isText) {
+      const text = await blob.text();
+      elements.previewContent.innerHTML =
+        `<pre>${escapeText(text)}</pre>`;
+    } else {
+      elements.previewContent.innerHTML = `
+        <div class="preview-fallback">
+          <p>Preview unavailable for this file type.</p>
+          <a href="${url}" download="${escapeText(fileEntry.name)}" class="preview-download-link">Download file</a>
+        </div>
+      `;
+    }
+
+    setPreviewLoading(false);
+  }
+
+  function setPreviewLoading(isLoading) {
+    if(!elements.previewLoader) return;
+
+    elements.previewLoader.classList.toggle(
+      "hidden",
+      !isLoading
+    );
+  }
+
+  function showPreviewModal(show) {
+    if(!elements.previewModal) return;
+
+    elements.previewModal.classList.toggle(
+      "hidden",
+      !show
+    );
+
+    elements.previewModal.setAttribute(
+      "aria-hidden",
+      String(!show)
+    );
+
+    if(show && elements.previewContent) {
+      elements.previewContent.scrollTop = 0;
+    }
+  }
+
+  function closeFilePreview() {
+    if(!elements.previewModal) return;
+
+    showPreviewModal(false);
+
+    if(!elements.previewContent) return;
+
+    const image =
+      elements.previewContent.querySelector("img");
+    const iframe =
+      elements.previewContent.querySelector("iframe");
+    const link =
+      elements.previewContent.querySelector("a");
+
+    [image, iframe, link].forEach((media) => {
+      if(!media) return;
+      const url = media.src || media.href;
+      if(url) {
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    elements.previewContent.innerHTML = "";
   }
 
   return {

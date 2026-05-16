@@ -292,6 +292,23 @@
         </div>
       </div>
     </section>
+
+    <div id="filePreviewModal" class="preview-modal hidden" aria-hidden="true">
+      <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="preview-header">
+          <div>
+            <h3 id="previewTitle" class="preview-title">Preview</h3>
+            <p id="previewSubtitle" class="preview-subtitle">Select a file to preview</p>
+          </div>
+          <button id="previewCloseBtn" type="button" class="preview-close" aria-label="Close preview">×</button>
+        </div>
+        <div class="preview-body">
+          <div id="previewLoader" class="preview-loader hidden">Loading file…</div>
+          <div id="previewError" class="preview-error hidden"></div>
+          <div id="previewContent" class="preview-content"></div>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script src="script.js"></script>

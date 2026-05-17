@@ -72,6 +72,16 @@
           <span class="nav-text">NotePilot AI</span>
         </a>
       </li>
+      <li class="nav-item" data-nav-target="settings">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5A3.5 3.5 0 1 1 8.5 12 3.5 3.5 0 0 1 12 8.5zm8 3.5-1.8-.7a6.9 6.9 0 0 0-.6-1.5l.8-1.8-1.7-1.7-1.8.8a6.9 6.9 0 0 0-1.5-.6L12 4h-2l-.7 1.8a6.9 6.9 0 0 0-1.5.6L6 5.6 4.3 7.3l.8 1.8a6.9 6.9 0 0 0-.6 1.5L2.7 12v2l1.8.7a6.9 6.9 0 0 0 .6 1.5l-.8 1.8L6 19.7l1.8-.8a6.9 6.9 0 0 0 1.5.6L10 21.3h2l.7-1.8a6.9 6.9 0 0 0 1.5-.6l1.8.8 1.7-1.7-.8-1.8a6.9 6.9 0 0 0 .6-1.5L20 14z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Settings</span>
+        </a>
+      </li>
       <li class="nav-item nav-logout" id="logoutBtn" data-nav-target="logout">
         <a href="#" class="nav-link">
           <span class="nav-icon">
@@ -302,9 +312,250 @@
         </div>
       </div>
     </div>
+
+    <section id="settingsView" class="settings-view hidden">
+      <div class="settings-container">
+        <div class="settings-header">
+          <h1>Settings</h1>
+          <p>Customize your Note-Files experience</p>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Appearance Settings -->
+          <div class="settings-category accent-purple">
+            <div class="category-header">
+              <h2>🎨 Appearance</h2>
+              <p>Customize look and feel</p>
+            </div>
+            <div class="settings-items">
+              <div class="setting-item">
+                <label>Dark Mode</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="darkModeToggle" class="toggle-input" checked>
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>RGB Glow Intensity</label>
+                <input type="range" id="glowIntensity" class="setting-slider" min="0" max="100" value="50">
+                <span class="slider-value">50%</span>
+              </div>
+              <div class="setting-item">
+                <label>Accent Color</label>
+                <div class="color-picker-grid">
+                  <button class="color-option" data-accent="blue" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);" title="Blue"></button>
+                  <button class="color-option" data-accent="purple" style="background: linear-gradient(135deg, #a78bfa, #c4b5fd);" title="Purple"></button>
+                  <button class="color-option" data-accent="cyan" style="background: linear-gradient(135deg, #06b6d4, #22d3ee);" title="Cyan"></button>
+                  <button class="color-option" data-accent="pink" style="background: linear-gradient(135deg, #ec4899, #f472b6);" title="Pink"></button>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>Font Size</label>
+                <input type="range" id="fontSize" class="setting-slider" min="80" max="130" value="100">
+                <span class="slider-value">100%</span>
+              </div>
+              <div class="setting-item">
+                <label>Glass Blur Intensity</label>
+                <input type="range" id="glassBlur" class="setting-slider" min="5" max="30" value="18">
+                <span class="slider-value">18px</span>
+              </div>
+              <div class="setting-item">
+                <label>Compact Mode</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="compactMode" class="toggle-input">
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Files Settings -->
+          <div class="settings-category accent-cyan">
+            <div class="category-header">
+              <h2>📁 Files</h2>
+              <p>File handling preferences</p>
+            </div>
+            <div class="settings-items">
+              <div class="setting-item">
+                <label>Auto-Save Uploads</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="autoSaveUploads" class="toggle-input" checked>
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>File Preview on Hover</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="filePreviewHover" class="toggle-input" checked>
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <button class="action-btn-secondary">Clear Cached Files</button>
+              </div>
+              <div class="setting-item">
+                <label>Default File Opening</label>
+                <select id="fileOpeningBehavior" class="setting-select">
+                  <option value="preview">Preview in Modal</option>
+                  <option value="new-tab">Open in New Tab</option>
+                  <option value="download">Download</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes Settings -->
+          <div class="settings-category accent-blue">
+            <div class="category-header">
+              <h2>📝 Notes</h2>
+              <p>Note-taking preferences</p>
+            </div>
+            <div class="settings-items">
+              <div class="setting-item">
+                <label>Show Line Numbers</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="showLineNumbers" class="toggle-input">
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>Auto-Save Interval (seconds)</label>
+                <input type="number" id="autoSaveInterval" class="setting-number" min="5" max="300" value="30">
+              </div>
+              <div class="setting-item">
+                <label>Note Font</label>
+                <select id="noteFont" class="setting-select">
+                  <option value="inter">Inter (Default)</option>
+                  <option value="system">System</option>
+                  <option value="monospace">Monospace</option>
+                  <option value="serif">Serif</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label>Page Width</label>
+                <select id="pageWidth" class="setting-select">
+                  <option value="compact">Compact</option>
+                  <option value="normal">Normal (Default)</option>
+                  <option value="wide">Wide</option>
+                  <option value="full">Full Width</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Settings -->
+          <div class="settings-category accent-cyan">
+            <div class="category-header">
+              <h2>✨ AI</h2>
+              <p>AI assistant preferences</p>
+            </div>
+            <div class="settings-items">
+              <div class="setting-item">
+                <label>AI Response Style</label>
+                <select id="aiResponseStyle" class="setting-select">
+                  <option value="concise">Concise</option>
+                  <option value="balanced">Balanced (Default)</option>
+                  <option value="detailed">Detailed</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label>Summary Length</label>
+                <select id="summaryLength" class="setting-select">
+                  <option value="short">Short</option>
+                  <option value="medium">Medium (Default)</option>
+                  <option value="long">Long</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label>AI Color Accent</label>
+                <div class="color-picker-grid">
+                  <button class="ai-color-option" data-ai-color="cyan" style="background: linear-gradient(135deg, #06b6d4, #22d3ee);" title="Cyan"></button>
+                  <button class="ai-color-option" data-ai-color="blue" style="background: linear-gradient(135deg, #3b82f6, #60a5fa);" title="Blue"></button>
+                  <button class="ai-color-option" data-ai-color="purple" style="background: linear-gradient(135deg, #a78bfa, #c4b5fd);" title="Purple"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Storage -->
+          <div class="settings-category accent-pink">
+            <div class="category-header">
+              <h2>💾 Storage</h2>
+              <p>View and manage storage</p>
+            </div>
+            <div class="settings-items">
+              <div class="storage-stats">
+                <div class="stat">
+                  <div class="stat-label">Total Files</div>
+                  <div class="stat-value" id="totalFiles">0</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-label">Notes Count</div>
+                  <div class="stat-value" id="notesCount">0</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-label">Folders Count</div>
+                  <div class="stat-value" id="foldersCount">0</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-label">Used Storage</div>
+                  <div class="stat-value" id="usedStorage">0 KB</div>
+                </div>
+              </div>
+              <div class="setting-item">
+                <button class="action-btn-secondary">Clear Cache</button>
+              </div>
+              <div class="setting-item">
+                <button class="action-btn-secondary">Backup Data</button>
+              </div>
+              <div class="setting-item">
+                <button class="action-btn-secondary">Export Workspace</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced Settings -->
+          <div class="settings-category accent-purple">
+            <div class="category-header">
+              <h2>⚙️ Advanced</h2>
+              <p>Advanced options</p>
+            </div>
+            <div class="settings-items">
+              <div class="setting-item">
+                <label>Developer Mode</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="developerMode" class="toggle-input">
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>Experimental Features</label>
+                <div class="toggle-switch">
+                  <input type="checkbox" id="experimentalFeatures" class="toggle-input">
+                  <span class="toggle-slider"></span>
+                </div>
+              </div>
+              <div class="setting-item">
+                <button class="action-btn-danger">Reset App to Default</button>
+              </div>
+              <div class="setting-version">
+                <p>Version 1.0.0</p>
+                <p class="text-muted">© 2026 Note-Files. All rights reserved.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="js/app.js" defer></script>
+  <script src="js/folders.js" defer></script>
+  <script src="js/notes.js" defer></script>
+  <script src="js/files.js" defer></script>
+  <script src="js/ai.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/settings.js" defer></script>
 </body>
 
 </html>

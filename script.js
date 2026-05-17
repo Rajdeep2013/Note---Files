@@ -842,13 +842,28 @@ const FolderSystem = (() => {
 
   }
 
+  function ensureDefaultRootFolders(tree) {
+    const requiredRootFolders = ["School", "Coding", "Photos", "Important"];
+    const normalizedTree = Array.isArray(tree) ? tree.map(normalizeFolderEntry) : [];
+    const existingRootNames = new Set(
+      normalizedTree
+        .filter((node) => node.parentId === null)
+        .map((node) => node.name.trim().toLowerCase())
+    );
+
+    requiredRootFolders.forEach((name) => {
+      if(!existingRootNames.has(name.toLowerCase())) {
+        normalizedTree.push(createFolderObject(name, null));
+      }
+    });
+
+    return normalizedTree;
+  }
+
   function loadFolderTree() {
     const stored = localStorage.getItem(FOLDER_TREE_STORAGE_KEY);
     if(!stored) {
-      const defaultFolders = [
-        createFolderObject("School", null),
-        createFolderObject("Coding", null)
-      ];
+      const defaultFolders = ensureDefaultRootFolders([]);
       saveFolderTree(defaultFolders);
       return defaultFolders;
     }
@@ -856,13 +871,17 @@ const FolderSystem = (() => {
     try {
       const parsed = JSON.parse(stored);
       if(Array.isArray(parsed)) {
-        return parsed.map(normalizeFolderEntry);
+        const normalized = ensureDefaultRootFolders(parsed);
+        saveFolderTree(normalized);
+        return normalized;
       }
     } catch {
       // fall through
     }
 
-    return [];
+    const recovered = ensureDefaultRootFolders([]);
+    saveFolderTree(recovered);
+    return recovered;
   }
 
   function saveFolderTree(tree) {
@@ -1133,6 +1152,7 @@ const FolderSystem = (() => {
   function openFolder(folderId) {
 
     if(!folderId) return;
+    if(!getFolderById(folderId)) return;
 
     state.activeFolderId = folderId;
 

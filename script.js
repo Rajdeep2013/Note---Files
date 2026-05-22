@@ -62,6 +62,19 @@ function safeParseStoredArray(value) {
 
 }
 
+function notifySearchDataChanged(scope = "all") {
+
+  document.dispatchEvent(
+    new CustomEvent("notepilot:data-updated", {
+      detail: {
+        scope,
+        timestamp: Date.now()
+      }
+    })
+  );
+
+}
+
 const FileDatabase = (() => {
 
   const DB_NAME =
@@ -202,6 +215,7 @@ function loadTasks() {
       document.createElement("li");
 
     li.classList.add("task-item");
+    li.dataset.taskIndex = String(index);
 
     if(taskObj.completed) {
 
@@ -218,7 +232,7 @@ function loadTasks() {
           ${taskObj.completed ? "checked" : ""}
           onchange="toggleTask(${index})">
 
-        <span>${taskObj.text}</span>
+        <span class="task-text">${taskObj.text}</span>
 
       </div>
 
@@ -255,6 +269,7 @@ if(addTaskBtn) {
     );
 
     loadTasks();
+    notifySearchDataChanged("tasks");
 
     taskInput.value = "";
 
@@ -275,6 +290,7 @@ function toggleTask(index) {
   );
 
   loadTasks();
+  notifySearchDataChanged("tasks");
 
 }
 
@@ -290,6 +306,7 @@ function deleteTask(index) {
   );
 
   loadTasks();
+  notifySearchDataChanged("tasks");
 
 }
 
@@ -406,6 +423,8 @@ function saveNotebookState() {
     String(notebookState.currentPage)
   );
 
+  notifySearchDataChanged("notes");
+
 }
 
 function updateNotebookControls() {
@@ -445,6 +464,7 @@ function renderCurrentNotebookPage(animate = false) {
 
   notesArea.value =
     notebookState.pages[notebookState.currentPage] || "";
+  notesArea.dataset.pageIndex = String(notebookState.currentPage);
 
   updateNotebookControls();
 
@@ -583,8 +603,6 @@ const FolderSystem = (() => {
   const elements = {
     dashboardView: document.getElementById("dashboardView"),
     folderView: document.getElementById("folderView"),
-    folderTreeSection: document.getElementById("folderTreeSection"),
-    folderTree: document.getElementById("folderTree"),
     dashboardFoldersGrid: document.getElementById("dashboardFoldersGrid"),
     folderTitle: document.getElementById("folderTitle"),
     folderBreadcrumbs: document.getElementById("folderBreadcrumbs"),
@@ -596,14 +614,7 @@ const FolderSystem = (() => {
     addFileBtn: document.getElementById("addFileBtn"),
     fileInput: document.getElementById("fileInput"),
     filesList: document.getElementById("filesList"),
-    subfolderGrid: document.getElementById("subfolderGrid"),
-    previewModal: document.getElementById("filePreviewModal"),
-    previewTitle: document.getElementById("previewTitle"),
-    previewSubtitle: document.getElementById("previewSubtitle"),
-    previewCloseBtn: document.getElementById("previewCloseBtn"),
-    previewLoader: document.getElementById("previewLoader"),
-    previewError: document.getElementById("previewError"),
-    previewContent: document.getElementById("previewContent")
+    subfolderGrid: document.getElementById("subfolderGrid")
   };
 
   const state = {
@@ -613,6 +624,12 @@ const FolderSystem = (() => {
   const FOLDER_TREE_STORAGE_KEY =
     getUserScopedKey("folderTree");
 
+  const LAST_OPEN_FOLDER_STORAGE_KEY =
+    getUserScopedKey("lastOpenedFolderId");
+
+  const FOLDER_VIEW_OPEN_STORAGE_KEY =
+    getUserScopedKey("folderViewOpen");
+
   let folderTree = [];
 
   const STORAGE_PREFIX =
@@ -620,25 +637,52 @@ const FolderSystem = (() => {
 
   function init() {
 
-    if(!elements.dashboardView || !elements.folderView || !elements.folderTree || !elements.dashboardFoldersGrid) {
+    if(!elements.dashboardView || !elements.folderView || !elements.dashboardFoldersGrid) {
       return;
     }
 
     folderTree = loadFolderTree();
     bindEvents();
-    renderFolderTree();
     renderDashboardFolders();
+    restorePersistedFolderViewState();
+
+    const previewApi = getFilePreviewApi();
+    if(previewApi && typeof previewApi.init === "function") {
+      previewApi.init();
+    }
 
   }
 
   function bindEvents() {
 
-    if(elements.folderTree) {
-      elements.folderTree.addEventListener("click", handleFolderTreeClick);
-    }
-
     if(elements.dashboardFoldersGrid) {
       elements.dashboardFoldersGrid.addEventListener("click", (event) => {
+        const actionBtn = event.target.closest(".folder-card-action-btn");
+        if(actionBtn) {
+          const folderId = actionBtn.dataset.folderId;
+          const action = actionBtn.dataset.folderAction;
+          if(folderId && action) {
+            if(action === "rename") {
+              const folder = getFolderById(folderId);
+              if(folder) {
+                const name = prompt("Rename folder", folder.name);
+                if(name) {
+                  renameFolder(folderId, name.trim());
+                  renderDashboardFolders();
+                  if(folderId === state.activeFolderId) {
+                    updateBreadcrumbs();
+                    if(elements.folderTitle) elements.folderTitle.textContent = folder.name;
+                  }
+                }
+              }
+            }
+            if(action === "delete") {
+              deleteFolder(folderId);
+            }
+          }
+          return;
+        }
+
         const card = event.target.closest(".folder-card");
         if(!card) return;
         const folderId = card.dataset.folder;
@@ -648,6 +692,33 @@ const FolderSystem = (() => {
 
     if(elements.subfolderGrid) {
       elements.subfolderGrid.addEventListener("click", (event) => {
+        const actionBtn = event.target.closest(".folder-card-action-btn");
+        if(actionBtn) {
+          const folderId = actionBtn.dataset.folderId;
+          const action = actionBtn.dataset.folderAction;
+          if(folderId && action) {
+            if(action === "rename") {
+              const folder = getFolderById(folderId);
+              if(folder) {
+                const name = prompt("Rename folder", folder.name);
+                if(name) {
+                  renameFolder(folderId, name.trim());
+                  renderSubfolders(state.activeFolderId);
+                  renderDashboardFolders();
+                  if(folderId === state.activeFolderId) {
+                    updateBreadcrumbs();
+                    if(elements.folderTitle) elements.folderTitle.textContent = folder.name;
+                  }
+                }
+              }
+            }
+            if(action === "delete") {
+              deleteFolder(folderId);
+            }
+          }
+          return;
+        }
+
         const card = event.target.closest(".folder-card");
         if(!card) return;
         const folderId = card.dataset.folder;
@@ -673,7 +744,6 @@ const FolderSystem = (() => {
         if(!name) return;
         const folder = createFolder(name.trim(), null);
         if(folder) {
-          renderFolderTree();
           renderDashboardFolders();
         }
       });
@@ -687,7 +757,6 @@ const FolderSystem = (() => {
         const folder = createFolder(name.trim(), state.activeFolderId);
         if(folder) {
           renderSubfolders(state.activeFolderId);
-          renderFolderTree();
           renderDashboardFolders();
         }
       });
@@ -739,24 +808,6 @@ const FolderSystem = (() => {
       });
     }
 
-    if(elements.previewCloseBtn) {
-      elements.previewCloseBtn.addEventListener("click", closeFilePreview);
-    }
-
-    if(elements.previewModal) {
-      elements.previewModal.addEventListener("click", (event) => {
-        if(event.target === elements.previewModal) {
-          closeFilePreview();
-        }
-      });
-    }
-
-    document.addEventListener("keydown", (event) => {
-      if(event.key === "Escape" && elements.previewModal && !elements.previewModal.classList.contains("hidden")) {
-        closeFilePreview();
-      }
-    });
-
   }
 
   function normalizeFolderId(folderName) {
@@ -768,78 +819,41 @@ const FolderSystem = (() => {
 
   }
 
-  function getStorageKey(folderId, resourceType) {
+  function buildNestedFolderTree(entries) {
+    const rawFolders = [];
 
-    return `${STORAGE_PREFIX}:${folderId}:${resourceType}`;
+    function collect(folderEntry, parentId = null) {
+      const normalized = normalizeFolderEntry(folderEntry);
+      normalized.parentId = normalized.parentId || parentId;
+      const item = {
+        ...normalized,
+        subfolders: [],
+        files: Array.isArray(normalized.files) ? normalized.files : [],
+        notes: Array.isArray(normalized.notes) ? normalized.notes : []
+      };
+      rawFolders.push(item);
 
-  }
-
-  function getLegacyStorageKeys(folderId, resourceType) {
-
-    return [
-      `${resourceType}_${folderId}`,
-      `notepilot:folder:${folderId}:${resourceType}`,
-      `notepilot:folder:v2:${folderId}:${resourceType}`
-    ];
-
-  }
-
-  function safeParseArray(value) {
-
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+      if(Array.isArray(normalized.subfolders)) {
+        normalized.subfolders.forEach((child) => collect(child, item.id));
+      }
     }
 
-  }
-
-  function readFolderResource(folderId, resourceType) {
-
-    const key =
-      getStorageKey(folderId, resourceType);
-
-    const namespacedValue =
-      localStorage.getItem(key);
-
-    if(namespacedValue !== null) {
-      return safeParseArray(namespacedValue);
+    if(Array.isArray(entries)) {
+      entries.forEach((entry) => collect(entry, null));
     }
 
-    const legacyKeys =
-      getLegacyStorageKeys(folderId, resourceType);
+    const folderMap = new Map(rawFolders.map((folder) => [folder.id, folder]));
+    const roots = [];
 
-    for(const legacyKey of legacyKeys) {
+    folderMap.forEach((folder) => {
+      if(folder.parentId && folderMap.has(folder.parentId) && folder.parentId !== folder.id) {
+        folderMap.get(folder.parentId).subfolders.push(folder);
+      } else {
+        roots.push(folder);
+      }
+    });
 
-      const legacyValue =
-        localStorage.getItem(legacyKey);
-
-      if(legacyValue === null) continue;
-
-      const parsedLegacy =
-        safeParseArray(legacyValue);
-
-      localStorage.setItem(
-        key,
-        JSON.stringify(parsedLegacy)
-      );
-
-      return parsedLegacy;
-
-    }
-
-    return [];
-
-  }
-
-  function writeFolderResource(folderId, resourceType, data) {
-
-    localStorage.setItem(
-      getStorageKey(folderId, resourceType),
-      JSON.stringify(data)
-    );
-
+    return roots;
   }
 
   function ensureDefaultRootFolders(tree) {
@@ -871,7 +885,8 @@ const FolderSystem = (() => {
     try {
       const parsed = JSON.parse(stored);
       if(Array.isArray(parsed)) {
-        const normalized = ensureDefaultRootFolders(parsed);
+        const nested = buildNestedFolderTree(parsed);
+        const normalized = ensureDefaultRootFolders(nested);
         saveFolderTree(normalized);
         return normalized;
       }
@@ -887,15 +902,55 @@ const FolderSystem = (() => {
   function saveFolderTree(tree) {
     folderTree = Array.isArray(tree) ? tree.map(normalizeFolderEntry) : [];
     localStorage.setItem(FOLDER_TREE_STORAGE_KEY, JSON.stringify(folderTree));
+    notifySearchDataChanged("folders");
   }
 
-  function createFolderObject(name, parentId) {
+  function persistFolderViewState(isOpen, folderId = "") {
+    localStorage.setItem(FOLDER_VIEW_OPEN_STORAGE_KEY, isOpen ? "1" : "0");
+    if(folderId) {
+      localStorage.setItem(LAST_OPEN_FOLDER_STORAGE_KEY, folderId);
+    }
+  }
+
+  function clearPersistedFolderStateForDeletedIds(folderIds = []) {
+    if(!Array.isArray(folderIds) || !folderIds.length) return;
+
+    const storedFolderId =
+      localStorage.getItem(LAST_OPEN_FOLDER_STORAGE_KEY);
+
+    if(!storedFolderId || !folderIds.includes(storedFolderId)) return;
+
+    persistFolderViewState(false);
+    localStorage.removeItem(LAST_OPEN_FOLDER_STORAGE_KEY);
+  }
+
+  function restorePersistedFolderViewState() {
+    const shouldRestoreOpen =
+      localStorage.getItem(FOLDER_VIEW_OPEN_STORAGE_KEY) === "1";
+
+    if(!shouldRestoreOpen) return;
+
+    const folderId =
+      localStorage.getItem(LAST_OPEN_FOLDER_STORAGE_KEY);
+
+    if(!folderId || !getFolderById(folderId)) {
+      persistFolderViewState(false);
+      return;
+    }
+
+    openFolder(folderId);
+  }
+
+  function createFolderObject(name, parentId = null) {
     return {
       id: `folder-${Math.random().toString(36).slice(2)}-${Date.now()}`,
       name: String(name || "New Folder").trim() || "New Folder",
       parentId: parentId || null,
       createdAt: Date.now(),
-      open: true
+      open: true,
+      subfolders: [],
+      files: [],
+      notes: []
     };
   }
 
@@ -907,86 +962,150 @@ const FolderSystem = (() => {
       name: String(entry.name || "New Folder").trim() || "New Folder",
       parentId: entry.parentId || null,
       createdAt: Number(entry.createdAt) || Date.now(),
-      open: typeof entry.open === "boolean" ? entry.open : true
+      open: typeof entry.open === "boolean" ? entry.open : true,
+      subfolders: Array.isArray(entry.subfolders)
+        ? entry.subfolders.map(normalizeFolderEntry)
+        : [],
+      files: Array.isArray(entry.files)
+        ? entry.files.map((file) => normalizeFileEntry(file, entry.id || entry.parentId || ""))
+        : [],
+      notes: Array.isArray(entry.notes)
+        ? entry.notes.map((note) => String(note))
+        : []
     };
   }
 
-  function getFolderById(folderId) {
+  function findFolderById(folderId, folders = folderTree) {
     if(!folderId) return null;
-    return folderTree.find((node) => node.id === folderId) || null;
+    for(const folder of folders) {
+      if(folder.id === folderId) {
+        return folder;
+      }
+      const found = findFolderById(folderId, folder.subfolders);
+      if(found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  function findFolderParent(folderId, folders = folderTree, parent = null) {
+    for(const folder of folders) {
+      if(folder.id === folderId) {
+        return parent;
+      }
+      const found = findFolderParent(folderId, folder.subfolders, folder);
+      if(found) {
+        return found;
+      }
+    }
+    return null;
+  }
+
+  function getFolderById(folderId) {
+    return findFolderById(folderId);
   }
 
   function getFolderChildren(parentId) {
-    return folderTree
-      .filter((node) => node.parentId === (parentId || null))
-      .sort((first, second) => first.name.localeCompare(second.name, undefined, { sensitivity: "base" }));
+    if(parentId === null || parentId === undefined) {
+      return folderTree
+        .slice()
+        .sort((first, second) => first.name.localeCompare(second.name, undefined, { sensitivity: "base" }));
+    }
+
+    const parent = findFolderById(parentId);
+    return parent
+      ? parent.subfolders.slice().sort((first, second) => first.name.localeCompare(second.name, undefined, { sensitivity: "base" }))
+      : [];
   }
 
   function getFolderPath(folderId) {
     const path = [];
-    let current = getFolderById(folderId);
+    let current = findFolderById(folderId);
     while(current) {
       path.unshift(current);
-      current = current.parentId ? getFolderById(current.parentId) : null;
+      current = current.parentId ? findFolderById(current.parentId) : null;
     }
     return path;
   }
 
+  function getDescendantFolderIds(folderId) {
+    const folder = findFolderById(folderId);
+    if(!folder) return [];
+
+    const ids = [folder.id];
+    folder.subfolders.forEach((child) => {
+      ids.push(...getDescendantFolderIds(child.id));
+    });
+    return ids;
+  }
+
+  function deleteFolderResources(folder) {
+    if(!folder) return;
+
+    folder.files.forEach((file) => {
+      if(file.fileKey) {
+        FileDatabase.deleteFileData(file.fileKey).catch(() => {});
+      }
+    });
+
+    folder.subfolders.forEach(deleteFolderResources);
+  }
+
+  async function deleteFolder(folderId) {
+    const folder = findFolderById(folderId);
+    if(!folder) return;
+
+    const shouldDelete = confirm(`Delete folder "${folder.name}" and all nested content?`);
+    if(!shouldDelete) return;
+
+    const deletedFolderIds =
+      getDescendantFolderIds(folderId);
+
+    const parent = findFolderParent(folderId);
+    if(parent) {
+      parent.subfolders = parent.subfolders.filter((item) => item.id !== folderId);
+    } else {
+      folderTree = folderTree.filter((item) => item.id !== folderId);
+    }
+
+    deleteFolderResources(folder);
+    saveFolderTree(folderTree);
+    clearPersistedFolderStateForDeletedIds(deletedFolderIds);
+
+    if(state.activeFolderId && !findFolderById(state.activeFolderId)) {
+      closeFolder();
+    }
+
+    renderDashboardFolders();
+
+    if(state.activeFolderId) {
+      renderFolderData();
+    }
+  }
+
   function createFolder(name, parentId) {
     const folder = createFolderObject(name, parentId);
-    folderTree.push(folder);
+    if(parentId) {
+      const parent = findFolderById(parentId);
+      if(parent) {
+        parent.subfolders.push(folder);
+      } else {
+        folderTree.push(folder);
+      }
+    } else {
+      folderTree.push(folder);
+    }
     saveFolderTree(folderTree);
     return folder;
   }
 
   function renameFolder(folderId, newName) {
-    const folder = getFolderById(folderId);
+    const folder = findFolderById(folderId);
     if(!folder || !newName) return null;
     folder.name = String(newName).trim() || folder.name;
     saveFolderTree(folderTree);
     return folder;
-  }
-
-  function toggleFolderOpen(folderId) {
-    const folder = getFolderById(folderId);
-    if(!folder) return;
-    folder.open = !folder.open;
-    saveFolderTree(folderTree);
-  }
-
-  function handleFolderTreeClick(event) {
-    const treeItem = event.target.closest(".folder-tree-item");
-    if(!treeItem) return;
-
-    const folderId = treeItem.dataset.folderId;
-    const action = event.target.dataset.folderAction;
-
-    if(action === "toggle") {
-      toggleFolderOpen(folderId);
-      renderFolderTree();
-      return;
-    }
-
-    if(action === "rename") {
-      const folder = getFolderById(folderId);
-      if(!folder) return;
-      const name = prompt("Rename folder", folder.name);
-      if(!name) return;
-      renameFolder(folderId, name.trim());
-      renderFolderTree();
-      renderDashboardFolders();
-      if(folderId === state.activeFolderId) {
-        updateBreadcrumbs();
-        elements.folderTitle.textContent = folder.name;
-      }
-      return;
-    }
-
-    if(event.target.closest(".folder-tree-action") || event.target.dataset.folderAction) {
-      return;
-    }
-
-    openFolder(folderId);
   }
 
   function getFolderLabel(folder) {
@@ -994,34 +1113,35 @@ const FolderSystem = (() => {
     return folder.name;
   }
 
-  function renderFolderTree() {
-    if(!elements.folderTree) return;
+  function syncActiveFolderCards() {
+    const activeFolderId = String(state.activeFolderId || "");
 
-    const buildTree = (parentId, level = 0) => {
-      const children = getFolderChildren(parentId);
-      if(!children.length) return "";
+    // Remove any leftover active classes globally to guarantee a single active card
+    document.querySelectorAll(".folder-card.active").forEach((c) => {
+      if(!c) return;
+      c.classList.remove("active");
+      c.setAttribute("aria-selected", "false");
+    });
 
-      return `
-        <ul class="folder-tree-list ${level === 0 ? "root-level" : "nested-level"}">
-          ${children.map((folder) => {
-            const nested = buildTree(folder.id, level + 1);
-            return `
-              <li class="folder-tree-item" data-folder-id="${folder.id}">
-                <button type="button" class="folder-tree-toggle" data-folder-action="toggle" aria-label="Toggle ${escapeText(folder.name)}">
-                  ${nested ? (folder.open ? "▾" : "▸") : ""}
-                </button>
-                <span class="folder-tree-label">${escapeText(folder.name)}</span>
-                <button type="button" class="folder-tree-action" data-folder-action="rename" aria-label="Rename ${escapeText(folder.name)}">✎</button>
-                ${folder.open ? nested : ""}
-              </li>
-            `;
-          }).join("")}
-        </ul>
-      `;
-    };
+    if(!activeFolderId) return;
 
-    elements.folderTree.innerHTML = buildTree(null);
+    // Apply active state to any matching cards in dashboard and subfolder grids
+    [elements.dashboardFoldersGrid, elements.subfolderGrid].forEach((grid) => {
+      if(!grid) return;
+      const selector = `.folder-card[data-folder="${activeFolderId}"]`;
+      const matches = grid.querySelectorAll(selector);
+      matches.forEach((card) => {
+        card.classList.add("active");
+        card.setAttribute("aria-selected", "true");
+        // ensure visible in scrollable containers
+        if(typeof card.scrollIntoView === "function" && grid.contains(card)) {
+          // only subtly bring into view without changing layout
+          card.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+        }
+      });
+    });
   }
+
 
   function renderDashboardFolders() {
     if(!elements.dashboardFoldersGrid) return;
@@ -1035,7 +1155,7 @@ const FolderSystem = (() => {
 
     roots.forEach((folder) => {
       const card = document.createElement("div");
-      card.className = "folder-card";
+      card.className = "folder-card folder-root-card";
       card.dataset.folder = folder.id;
       card.innerHTML = `
         <div class="folder-card-content">
@@ -1049,9 +1169,15 @@ const FolderSystem = (() => {
             <p>${formatFolderSubtitle(folder)}</p>
           </div>
         </div>
+        <div class="folder-card-actions">
+          <button class="folder-card-action-btn" type="button" data-folder-action="rename" data-folder-id="${folder.id}" aria-label="Rename ${escapeText(folder.name)}">✎</button>
+          <button class="folder-card-action-btn folder-card-delete" type="button" data-folder-action="delete" data-folder-id="${folder.id}" aria-label="Delete ${escapeText(folder.name)}">🗑</button>
+        </div>
       `;
       elements.dashboardFoldersGrid.appendChild(card);
     });
+
+    syncActiveFolderCards();
   }
 
   function formatFolderSubtitle(folder) {
@@ -1072,7 +1198,7 @@ const FolderSystem = (() => {
 
     children.forEach((subfolder) => {
       const card = document.createElement("div");
-      card.className = "folder-card";
+      card.className = "folder-card subfolder-card";
       card.dataset.folder = subfolder.id;
       card.innerHTML = `
         <div class="folder-card-content">
@@ -1086,9 +1212,15 @@ const FolderSystem = (() => {
             <p>${formatFolderSubtitle(subfolder)}</p>
           </div>
         </div>
+        <div class="folder-card-actions">
+          <button class="folder-card-action-btn" type="button" data-folder-action="rename" data-folder-id="${subfolder.id}" aria-label="Rename ${escapeText(subfolder.name)}">✎</button>
+          <button class="folder-card-action-btn folder-card-delete" type="button" data-folder-action="delete" data-folder-id="${subfolder.id}" aria-label="Delete ${escapeText(subfolder.name)}">🗑</button>
+        </div>
       `;
       elements.subfolderGrid.appendChild(card);
     });
+
+    syncActiveFolderCards();
   }
 
   function formatFolderTitle(folderId) {
@@ -1107,7 +1239,7 @@ const FolderSystem = (() => {
     elements.folderBreadcrumbs.innerHTML = path
       .map((folder, index) => {
         if(index === path.length - 1) {
-          return `<span>${escapeText(folder.name)}</span>`;
+          return `<span class="breadcrumb-current">${escapeText(folder.name)}</span>`;
         }
         return `<button type="button" class="breadcrumb-link" data-folder-id="${folder.id}">${escapeText(folder.name)}</button>`;
       })
@@ -1122,31 +1254,28 @@ const FolderSystem = (() => {
     });
   }
 
+  function getNotesForFolder(folderId) {
+    const folder = findFolderById(folderId);
+    return folder ? Array.isArray(folder.notes) ? folder.notes.slice() : [] : [];
+  }
+
   function saveNotesForFolder(folderId, notes) {
-
-    writeFolderResource(
-      folderId,
-      "notes",
-      notes
-    );
-
+    const folder = findFolderById(folderId);
+    if(!folder) return;
+    folder.notes = Array.isArray(notes) ? notes.map((note) => String(note)) : [];
+    saveFolderTree(folderTree);
   }
 
   function getFilesForFolder(folderId) {
-
-    return readFolderResource(folderId, "files")
-      .map((entry) => normalizeFileEntry(entry));
-
+    const folder = findFolderById(folderId);
+    return folder ? Array.isArray(folder.files) ? folder.files.map((entry) => normalizeFileEntry(entry, folderId)) : [] : [];
   }
 
   function saveFilesForFolder(folderId, files) {
-
-    writeFolderResource(
-      folderId,
-      "files",
-      files
-    );
-
+    const folder = findFolderById(folderId);
+    if(!folder) return;
+    folder.files = Array.isArray(files) ? files.map((entry) => normalizeFileEntry(entry, folderId)) : [];
+    saveFolderTree(folderTree);
   }
 
   function openFolder(folderId) {
@@ -1155,6 +1284,8 @@ const FolderSystem = (() => {
     if(!getFolderById(folderId)) return;
 
     state.activeFolderId = folderId;
+    persistFolderViewState(true, folderId);
+    syncActiveFolderCards();
 
     if(elements.folderTitle) {
       elements.folderTitle.textContent = formatFolderTitle(folderId);
@@ -1175,11 +1306,22 @@ const FolderSystem = (() => {
 
   }
 
+  function openFolderById(folderId) {
+    if(!folderId || !getFolderById(folderId)) {
+      return false;
+    }
+
+    openFolder(folderId);
+    return true;
+  }
+
   function closeFolder() {
 
     closeFilePreview();
 
     state.activeFolderId = "";
+    persistFolderViewState(false);
+    syncActiveFolderCards();
 
     transitionViews({
       showDashboard: true,
@@ -1513,6 +1655,7 @@ const FolderSystem = (() => {
     renderFiles(files);
     renderSubfolders(state.activeFolderId);
     updateBreadcrumbs();
+    syncActiveFolderCards();
 
   }
 
@@ -1533,6 +1676,7 @@ const FolderSystem = (() => {
         document.createElement("div");
 
       item.className = "note-item";
+      item.dataset.noteIndex = String(index);
 
       item.innerHTML = `
         <p class="note-text">${escapeText(note)}</p>
@@ -1567,7 +1711,7 @@ const FolderSystem = (() => {
       item.className = "file-item";
 
       item.innerHTML = `
-        <div class="file-card" data-index="${index}" role="button" tabindex="0">
+        <div class="file-card" data-index="${index}" data-file-id="${escapeText(file.id)}" role="button" tabindex="0">
           <div class="file-preview ${file.previewDataUrl ? "has-preview" : ""}">
             ${
               file.previewDataUrl
@@ -1584,6 +1728,9 @@ const FolderSystem = (() => {
             <p class="file-name" title="${escapeText(file.name)}">${escapeText(file.name)}</p>
             <p class="file-subtext">${formatFileLabel(file)}</p>
           </div>
+          <div class="file-actions">
+            <button class="file-open-btn" type="button" data-index="${index}" aria-label="Open ${escapeText(file.name)}">Open</button>
+          </div>
         </div>
       `;
 
@@ -1593,19 +1740,20 @@ const FolderSystem = (() => {
 
   }
 
-  function normalizeFileEntry(entry) {
+  function normalizeFileEntry(entry, folderId = state.activeFolderId) {
 
     if(typeof entry === "string") {
       const id = `file-${Math.random().toString(36).slice(2)}-${Date.now()}`;
       return {
         id,
-        fileKey: `notepilot:file:${ACTIVE_USER_SLUG}:${state.activeFolderId || "unknown"}:${id}`,
+        fileKey: `notepilot:file:${ACTIVE_USER_SLUG}:${folderId || "unknown"}:${id}`,
         name: entry,
         type: "",
         size: 0,
         extension: getFileExtension(entry),
         uploadedAt: Date.now(),
-        folderId: state.activeFolderId || "",
+        folderId: folderId || "",
+        parentFolderId: null,
         previewDataUrl: "",
         textData: ""
       };
@@ -1615,13 +1763,14 @@ const FolderSystem = (() => {
 
     return {
       id,
-      fileKey: entry.fileKey || `notepilot:file:${ACTIVE_USER_SLUG}:${state.activeFolderId || "unknown"}:${id}`,
+      fileKey: entry.fileKey || `notepilot:file:${ACTIVE_USER_SLUG}:${folderId || "unknown"}:${id}`,
       name: entry.name || "Untitled file",
       type: entry.type || "",
       size: Number(entry.size) || 0,
       extension: entry.extension || getFileExtension(entry.name || ""),
       uploadedAt: entry.uploadedAt || Date.now(),
-      folderId: entry.folderId || state.activeFolderId || "",
+      folderId: entry.folderId || folderId || "",
+      parentFolderId: null,
       previewDataUrl: entry.previewDataUrl || "",
       textData: entry.textData || ""
     };
@@ -1663,6 +1812,20 @@ const FolderSystem = (() => {
     }
   }
 
+  function getFilePreviewApi() {
+    if(typeof window === "undefined") {
+      return null;
+    }
+
+    const previewApi = window.FilePreview;
+
+    if(!previewApi || typeof previewApi.open !== "function" || typeof previewApi.close !== "function") {
+      return null;
+    }
+
+    return previewApi;
+  }
+
   function handleFilesListClick(event) {
     const deleteBtn =
       event.target.closest(".file-delete-btn");
@@ -1691,122 +1854,128 @@ const FolderSystem = (() => {
   }
 
   async function openFile(fileEntry) {
-    if(!elements.previewModal || !elements.previewContent) return;
+    const previewApi = getFilePreviewApi();
+    if(!previewApi || !fileEntry) return;
 
-    showPreviewModal(true);
-    setPreviewLoading(true);
-
-    if(elements.previewTitle) {
-      elements.previewTitle.textContent = fileEntry.name || "Preview";
-    }
-
-    if(elements.previewSubtitle) {
-      elements.previewSubtitle.textContent = formatFileLabel(fileEntry);
-    }
-
-    if(elements.previewError) {
-      elements.previewError.classList.add("hidden");
-      elements.previewError.textContent = "";
-    }
-
-    elements.previewContent.innerHTML = "";
-
-    const blob = await getStoredFileBlob(fileEntry.fileKey);
-
-    const isImage =
-      fileEntry.type.startsWith("image/") ||
-      ["png","jpg","jpeg","gif","webp","svg"].includes(fileEntry.extension);
-    const isPdf =
-      fileEntry.type === "application/pdf" ||
-      fileEntry.extension === "pdf";
-    const isText =
-      fileEntry.type.startsWith("text/") ||
-      ["txt","md","json","csv","html","css","js"].includes(fileEntry.extension);
-
-    if(blob) {
-      const url = URL.createObjectURL(blob);
-      if(isImage) {
-        elements.previewContent.innerHTML =
-          `<img src="${url}" alt="${escapeText(fileEntry.name)}">`;
-      } else if(isPdf) {
-        elements.previewContent.innerHTML = `
-          <div class="preview-file-actions">
-            <p>PDF preview is available in a new browser tab.</p>
-            <a href="${url}" target="_blank" rel="noopener" class="preview-open-link">Open PDF in new tab</a>
-            <a href="${url}" download="${escapeText(fileEntry.name)}" class="preview-download-link">Download PDF</a>
-          </div>
-        `;
-      } else if(isText) {
-        const text = await blob.text();
-        elements.previewContent.innerHTML =
-          `<pre>${escapeText(text)}</pre>`;
-        URL.revokeObjectURL(url);
-        setPreviewLoading(false);
-        return;
-      } else {
-        elements.previewContent.innerHTML = `
-          <div class="preview-fallback">
-            <p>Preview unavailable for this file type.</p>
-            <a href="${url}" download="${escapeText(fileEntry.name)}" class="preview-download-link">Download file</a>
-          </div>
-        `;
-      }
-      setPreviewLoading(false);
-      return;
-    }
-
-    if(isImage && fileEntry.previewDataUrl) {
-      elements.previewContent.innerHTML =
-        `<img src="${fileEntry.previewDataUrl}" alt="${escapeText(fileEntry.name)}">`;
-      setPreviewLoading(false);
-      return;
-    }
-
-    if(isText && fileEntry.textData) {
-      elements.previewContent.innerHTML =
-        `<pre>${escapeText(fileEntry.textData)}</pre>`;
-      setPreviewLoading(false);
-      return;
-    }
-
-    setPreviewLoading(false);
-    if(elements.previewError) {
-      elements.previewError.textContent =
-        "Unable to open this file safely. The file content is not available.";
-      elements.previewError.classList.remove("hidden");
-    }
-  }
-
-  function setPreviewLoading(isLoading) {
-    if(!elements.previewLoader) return;
-    elements.previewLoader.classList.toggle("hidden", !isLoading);
-  }
-
-  function showPreviewModal(show) {
-    if(!elements.previewModal) return;
-    elements.previewModal.classList.toggle("hidden", !show);
-    elements.previewModal.setAttribute("aria-hidden", String(!show));
-    if(show && elements.previewContent) {
-      elements.previewContent.scrollTop = 0;
-    }
+    await previewApi.open({
+      file: fileEntry,
+      subtitle: formatFileLabel(fileEntry),
+      iconSvg: getFileIconSvg(fileEntry.extension),
+      getBlob: () => getStoredFileBlob(fileEntry.fileKey)
+    });
   }
 
   function closeFilePreview() {
-    if(!elements.previewModal) return;
-    if(elements.previewContent) {
-      const image = elements.previewContent.querySelector("img");
-      const iframe = elements.previewContent.querySelector("iframe");
-      const links = elements.previewContent.querySelectorAll("a");
-      [image, iframe, ...links].forEach((media) => {
-        if(!media) return;
-        const url = media.src || media.href;
-        if(url && url.startsWith("blob:")) {
-          URL.revokeObjectURL(url);
-        }
-      });
-      elements.previewContent.innerHTML = "";
+    const previewApi = getFilePreviewApi();
+
+    if(previewApi) {
+      previewApi.close();
     }
-    showPreviewModal(false);
+  }
+
+  function escapeSelectorValue(value) {
+    const source = String(value || "");
+
+    if(typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+      return CSS.escape(source);
+    }
+
+    return source.replace(/[\\"]/g, "\\$&");
+  }
+
+  function revealElement(element) {
+    if(!element) return;
+
+    element.classList.remove("search-hit");
+    element.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest"
+    });
+
+    requestAnimationFrame(() => {
+      element.classList.add("search-hit");
+      setTimeout(() => {
+        element.classList.remove("search-hit");
+      }, 980);
+    });
+  }
+
+  function revealNoteByIndex(folderId, noteIndex) {
+    if(!openFolderById(folderId)) {
+      return false;
+    }
+
+    if(!Number.isInteger(noteIndex) || noteIndex < 0) {
+      return false;
+    }
+
+    requestAnimationFrame(() => {
+      const noteElement = elements.notesList
+        ? elements.notesList.querySelector(`.note-item[data-note-index="${noteIndex}"]`)
+        : null;
+      revealElement(noteElement);
+    });
+
+    return true;
+  }
+
+  async function revealFileById(folderId, fileId, options = {}) {
+    if(!openFolderById(folderId) || !fileId) {
+      return false;
+    }
+
+    const files = getFilesForFolder(folderId);
+    const targetFile = files.find((file) => file.id === fileId);
+
+    if(!targetFile) {
+      return false;
+    }
+
+    requestAnimationFrame(() => {
+      const selector = `.file-card[data-file-id="${escapeSelectorValue(fileId)}"]`;
+      const fileElement = elements.filesList ? elements.filesList.querySelector(selector) : null;
+      revealElement(fileElement);
+    });
+
+    if(options.openPreview !== false) {
+      await openFile(targetFile);
+    }
+
+    return true;
+  }
+
+  function getFolderTreeSnapshot() {
+    return folderTree.map(cloneFolderForSnapshot);
+  }
+
+  function cloneFolderForSnapshot(folder) {
+    if(!folder || typeof folder !== "object") {
+      return null;
+    }
+
+    return {
+      id: String(folder.id || ""),
+      name: String(folder.name || "Folder"),
+      parentId: folder.parentId || null,
+      notes: Array.isArray(folder.notes) ? folder.notes.map((note) => String(note)) : [],
+      files: Array.isArray(folder.files)
+        ? folder.files.map((file) => ({
+          id: String(file?.id || ""),
+          name: String(file?.name || "Untitled file"),
+          extension: String(file?.extension || ""),
+          type: String(file?.type || ""),
+          fileKey: String(file?.fileKey || "")
+        }))
+        : [],
+      subfolders: Array.isArray(folder.subfolders)
+        ? folder.subfolders.map(cloneFolderForSnapshot).filter(Boolean)
+        : []
+    };
+  }
+
+  function getActiveFolderId() {
+    return state.activeFolderId || "";
   }
 
   function getFilePreviewDataUrl(file) {
@@ -1924,6 +2093,11 @@ const FolderSystem = (() => {
 
   return {
     init,
+    openFolder: openFolderById,
+    revealNoteByIndex,
+    revealFileById,
+    getFolderTreeSnapshot,
+    getActiveFolderId,
     closeFolder,
     isFolderOpen
   };
@@ -1961,6 +2135,8 @@ const NavigationSystem = (() => {
     }
 
     bindEvents();
+    activeTarget =
+      FolderSystem.isFolderOpen() ? "files" : "dashboard";
     updateActiveItem(activeTarget);
 
   }
@@ -2005,14 +2181,17 @@ const NavigationSystem = (() => {
 
     event.preventDefault();
 
-    if(FolderSystem.isFolderOpen() && target !== "files") {
-      FolderSystem.closeFolder();
+    const previousTarget = activeTarget;
+
+    if(target === "settings") {
+      window.notepilotPreviousNavTarget = previousTarget;
+      activeTarget = target;
+      updateActiveItem(target);
+      closeMobileSidebar();
+      return;
     }
 
-    activeTarget = target;
-    updateActiveItem(target);
-    scrollToSection(target);
-    closeMobileSidebar();
+    goTo(target);
 
   }
 
@@ -2090,6 +2269,21 @@ const NavigationSystem = (() => {
 
   }
 
+  function goTo(target) {
+    if(!target || target === "logout" || target === "settings") {
+      return;
+    }
+
+    if(FolderSystem.isFolderOpen() && target !== "files") {
+      FolderSystem.closeFolder();
+    }
+
+    activeTarget = target;
+    updateActiveItem(target);
+    scrollToSection(target);
+    closeMobileSidebar();
+  }
+
   function scrollToSection(target) {
 
     if(target === "files" && FolderSystem.isFolderOpen()) {
@@ -2148,12 +2342,111 @@ const NavigationSystem = (() => {
   }
 
   return {
-    init
+    init,
+    goTo
   };
 
 })();
 
 NavigationSystem.init();
+
+function pulseSearchElement(element) {
+  if(!element) return;
+
+  element.classList.remove("search-hit");
+  element.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+    inline: "nearest"
+  });
+
+  requestAnimationFrame(() => {
+    element.classList.add("search-hit");
+    setTimeout(() => {
+      element.classList.remove("search-hit");
+    }, 980);
+  });
+}
+
+function openTaskFromSearch(taskIndex) {
+  if(!Number.isInteger(taskIndex) || taskIndex < 0 || taskIndex >= tasks.length) {
+    return false;
+  }
+
+  NavigationSystem.goTo("tasks");
+
+  requestAnimationFrame(() => {
+    const taskItem = taskList
+      ? taskList.querySelector(`.task-item[data-task-index="${taskIndex}"]`)
+      : null;
+    pulseSearchElement(taskItem);
+  });
+
+  return true;
+}
+
+function openNotebookPageFromSearch(pageIndex) {
+  if(
+    !Number.isInteger(pageIndex) ||
+    pageIndex < 0 ||
+    pageIndex >= notebookState.pages.length
+  ) {
+    return false;
+  }
+
+  NavigationSystem.goTo("notes");
+
+  notebookState.currentPage = pageIndex;
+  saveNotebookState();
+  renderCurrentNotebookPage(true);
+
+  if(notesArea) {
+    notesArea.focus();
+    pulseSearchElement(notesArea);
+  }
+
+  return true;
+}
+
+window.NotePilotSearchBridge = {
+  getSnapshot() {
+    return {
+      folderTree: FolderSystem.getFolderTreeSnapshot(),
+      activeFolderId: FolderSystem.getActiveFolderId(),
+      tasks: tasks.map((task, index) => ({
+        index,
+        text: String(task?.text || ""),
+        completed: Boolean(task?.completed)
+      })),
+      notebookPages: notebookState.pages.map((page, index) => ({
+        index,
+        text: String(page || "")
+      })),
+      currentNotebookPage: Number(notebookState.currentPage) || 0
+    };
+  },
+  goToSection(target) {
+    NavigationSystem.goTo(target);
+  },
+  openFolder(folderId) {
+    NavigationSystem.goTo("files");
+    return FolderSystem.openFolder(folderId);
+  },
+  openFolderNote(folderId, noteIndex) {
+    NavigationSystem.goTo("files");
+    return FolderSystem.revealNoteByIndex(folderId, noteIndex);
+  },
+  async openFolderFile(folderId, fileId, options = {}) {
+    NavigationSystem.goTo("files");
+    return FolderSystem.revealFileById(folderId, fileId, options);
+  },
+  openTask(taskIndex) {
+    return openTaskFromSearch(taskIndex);
+  },
+  openNotebookPage(pageIndex) {
+    return openNotebookPageFromSearch(pageIndex);
+  }
+};
 
 /* ---------------- NOTEPILOT AI SUMMARIZER ---------------- */
 

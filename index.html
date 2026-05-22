@@ -5,6 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Note - Files</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Orbitron:wght@600;700;800&family=Poppins:ital,wght@0,600;0,700;1,600;1,700&family=Rajdhani:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -72,6 +75,16 @@
           <span class="nav-text">NotePilot AI</span>
         </a>
       </li>
+      <li class="nav-item" data-nav-target="settings">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7zm7.5-2.5h-1.8a7.9 7.9 0 0 0-1.2-2.7l1.2-1.2-1.5-1.5-1.2 1.2A7.9 7.9 0 0 0 12 4.3V2h-1.8v2.3a7.9 7.9 0 0 0-2.7 1.2L6.3 5.7 4.8 7.2l1.2 1.2A7.9 7.9 0 0 0 4.3 12H2v1.8h2.3a7.9 7.9 0 0 0 1.2 2.7L4.3 17.3l1.5 1.5 1.2-1.2A7.9 7.9 0 0 0 12 19.7V22h1.8v-2.3a7.9 7.9 0 0 0 2.7-1.2l1.2 1.2 1.5-1.5-1.2-1.2a7.9 7.9 0 0 0 1.2-2.7H19.5V13z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Settings</span>
+        </a>
+      </li>
       <li class="nav-item nav-logout" id="logoutBtn" data-nav-target="logout">
         <a href="#" class="nav-link">
           <span class="nav-icon">
@@ -93,11 +106,22 @@
             <strong>Note - Files</strong>
             <small>Productivity Workspace</small>
           </div>
-          <div class="top-nav-search">
+          <div id="globalSearchBox" class="top-nav-search global-search-shell">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm9 16-3.8-3.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
-            <input type="search" placeholder="Search notes, tasks, files...">
+            <input id="globalSearchInput" type="search" placeholder="Search folders, files, notes..." autocomplete="off" spellcheck="false" aria-expanded="false" aria-controls="globalSearchPanel">
+            <div id="globalSearchPanel" class="global-search-panel hidden" aria-hidden="true">
+              <div class="global-search-filters" role="tablist" aria-label="Search filters">
+                <button type="button" class="global-search-filter is-active" data-search-filter="all">All</button>
+                <button type="button" class="global-search-filter" data-search-filter="folders">Folders</button>
+                <button type="button" class="global-search-filter" data-search-filter="files">Files</button>
+                <button type="button" class="global-search-filter" data-search-filter="notes">Notes</button>
+                <button type="button" class="global-search-filter" data-search-filter="tasks">Tasks</button>
+              </div>
+              <div id="globalSearchResults" class="global-search-results" role="listbox" aria-label="Global search results"></div>
+              <p id="globalSearchEmpty" class="global-search-empty hidden">No matching results found</p>
+            </div>
           </div>
         </div>
         <div class="top-nav-actions">
@@ -134,10 +158,6 @@
             <p class="folder-panel-subtitle">Create nested workspaces and browse your folder hierarchy.</p>
           </div>
           <button id="newRootFolderBtn" class="action-btn">New Folder</button>
-        </div>
-
-        <div id="folderTreeSection" class="folder-tree-section">
-          <div id="folderTree" class="folder-tree"></div>
         </div>
 
         <div id="dashboardFoldersGrid" class="folders-grid"></div>
@@ -260,22 +280,125 @@
     <div id="filePreviewModal" class="preview-modal hidden" aria-hidden="true">
       <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
         <div class="preview-header">
-          <div>
-            <h3 id="previewTitle" class="preview-title">File preview</h3>
+          <div class="preview-header-meta">
+            <h3 id="previewTitle" class="preview-title">File Preview</h3>
             <p id="previewSubtitle" class="preview-subtitle">Select a file to view</p>
+            <span id="previewTypeBadge" class="preview-type-badge">FILE</span>
           </div>
-          <button id="previewCloseBtn" type="button" class="preview-close" aria-label="Close preview">×</button>
+          <div class="preview-header-actions">
+            <a id="previewDownloadBtn" class="preview-download-btn is-disabled" href="#" download aria-disabled="true">Download</a>
+            <button id="previewMaxBtn" type="button" class="preview-window-btn preview-max-btn" aria-pressed="false" aria-label="Maximize preview">
+              <span class="preview-window-icon preview-window-icon-max" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+              <span class="preview-window-icon preview-window-icon-restore" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M9 9h11v11H9zM4 4h11v2H6v9H4z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            </button>
+            <button id="previewCloseBtn" type="button" class="preview-close" aria-label="Close preview">&times;</button>
+          </div>
         </div>
         <div class="preview-body">
-          <div id="previewLoader" class="preview-loader hidden">Loading file…</div>
+          <div id="previewLoader" class="preview-loader hidden">Loading file...</div>
           <div id="previewError" class="preview-error hidden"></div>
           <div id="previewContent" class="preview-content"></div>
         </div>
       </div>
     </div>
+    <div id="settingsOverlay" class="settings-overlay hidden" aria-hidden="true">
+      <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-panel-header">
+          <div>
+            <p class="settings-panel-label">Workspace Preferences</p>
+            <h2 id="settingsTitle">Settings</h2>
+          </div>
+          <button id="closeSettingsBtn" type="button" class="settings-close" aria-label="Close settings">×</button>
+        </div>
+
+        <div class="settings-panel-content">
+          <div class="settings-panel-summary">
+            <p>Customize the look and feel of Note - Files with premium glassmorphism controls, neon glow accents, and smooth dashboard transitions.</p>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span>Appearance</span>
+              <small>Adjust your workspace theme and display style.</small>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Theme mode</p>
+                <p class="settings-control-description">Switch between dark and light workspace styling.</p>
+              </div>
+              <button id="themeToggle" type="button" class="settings-toggle" aria-pressed="false">
+                <span class="settings-toggle-thumb"></span>
+              </button>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Accent color</p>
+                <p class="settings-control-description">Pick a neon accent that powers borders, glows, and highlights.</p>
+              </div>
+              <div class="settings-color-group">
+                <div class="settings-color-palette">
+                  <button type="button" class="settings-swatch" data-color="#3b82f6" style="background: #3b82f6"></button>
+                  <button type="button" class="settings-swatch" data-color="#8b5cf6" style="background: #8b5cf6"></button>
+                  <button type="button" class="settings-swatch" data-color="#06b6d4" style="background: #06b6d4"></button>
+                  <button type="button" class="settings-swatch" data-color="#ec4899" style="background: #ec4899"></button>
+                </div>
+                <input id="accentColorPicker" type="color" value="#3b82f6" class="settings-color-picker">
+              </div>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">RGB glow intensity</p>
+                <p class="settings-control-description">Control the ambient glow strength across dashboard elements.</p>
+              </div>
+              <div class="settings-slider-group">
+                <input id="glowIntensity" type="range" min="0.05" max="0.45" step="0.01" value="0.18">
+                <span id="glowValue" class="settings-slider-value">18%</span>
+              </div>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Compact mode</p>
+                <p class="settings-control-description">Reduce spacing for a tighter, productivity-focused layout.</p>
+              </div>
+              <button id="compactModeToggle" type="button" class="settings-toggle" aria-pressed="false">
+                <span class="settings-toggle-thumb"></span>
+              </button>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Font size</p>
+                <p class="settings-control-description">Scale the dashboard typography to your comfort.</p>
+              </div>
+              <div class="settings-slider-group">
+                <input id="fontSizeSlider" type="range" min="14" max="20" step="1" value="16">
+                <span id="fontSizeValue" class="settings-slider-value">16px</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
+  <script src="js/filePreview.js"></script>
   <script src="script.js"></script>
+  <script src="settings.js"></script>
+  <script src="js/search.js"></script>
 </body>
 
 </html>
+
+

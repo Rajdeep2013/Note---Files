@@ -160,6 +160,12 @@ const FileDatabase = (() => {
 const welcomeText =
   document.getElementById("welcomeText");
 
+let FolderSystem;
+let notebookState = {
+  pages: [],
+  currentPage: 0
+};
+
 if(savedUsername && welcomeText) {
 
   welcomeText.textContent =
@@ -177,6 +183,18 @@ const taskInput =
 
 const taskList =
   document.getElementById("taskList");
+
+const totalFoldersCount =
+  document.getElementById("totalFoldersCount");
+
+const totalFilesCount =
+  document.getElementById("totalFilesCount");
+
+const totalNotesCount =
+  document.getElementById("totalNotesCount");
+
+const totalTasksCount =
+  document.getElementById("totalTasksCount");
 
 const TASKS_STORAGE_KEY =
   getUserScopedKey("tasks");
@@ -245,6 +263,47 @@ function loadTasks() {
 
   });
 
+  updateWorkspaceStats();
+
+}
+
+function countFolderTreeMetrics(snapshot) {
+  const totals = {
+    folders: 0,
+    files: 0,
+    notes: 0
+  };
+
+  if(!Array.isArray(snapshot)) return totals;
+
+  function traverse(nodes) {
+    nodes.forEach((folder) => {
+      totals.folders += 1;
+      totals.files += Array.isArray(folder.files) ? folder.files.length : 0;
+      totals.notes += Array.isArray(folder.notes) ? folder.notes.length : 0;
+      if(Array.isArray(folder.subfolders)) {
+        traverse(folder.subfolders);
+      }
+    });
+  }
+
+  traverse(snapshot);
+  return totals;
+}
+
+function updateWorkspaceStats() {
+  const snapshot = typeof FolderSystem !== "undefined" && FolderSystem.getFolderTreeSnapshot
+    ? FolderSystem.getFolderTreeSnapshot()
+    : [];
+
+  const counts = countFolderTreeMetrics(snapshot);
+  const notebookPages = Array.isArray(notebookState.pages) ? notebookState.pages.length : 0;
+  const noteTotal = counts.notes + notebookPages;
+
+  if(totalFoldersCount) totalFoldersCount.textContent = String(counts.folders);
+  if(totalFilesCount) totalFilesCount.textContent = String(counts.files);
+  if(totalNotesCount) totalNotesCount.textContent = String(noteTotal);
+  if(totalTasksCount) totalTasksCount.textContent = String(Array.isArray(tasks) ? tasks.length : 0);
 }
 
 /* ADD TASK */
@@ -346,7 +405,7 @@ const LEGACY_NOTEBOOK_PAGES_KEY =
 const LEGACY_NOTEBOOK_CURRENT_PAGE_KEY =
   "notepilot:notebook:current-page";
 
-const notebookState = {
+notebookState = {
   pages: [""],
   currentPage: 0
 };
@@ -424,6 +483,7 @@ function saveNotebookState() {
   );
 
   notifySearchDataChanged("notes");
+  updateWorkspaceStats();
 
 }
 
@@ -598,7 +658,7 @@ if(logoutBtn) {
 
 /* ---------------- FOLDER VIEW ---------------- */
 
-const FolderSystem = (() => {
+FolderSystem = (() => {
 
   const elements = {
     dashboardView: document.getElementById("dashboardView"),
@@ -644,6 +704,7 @@ const FolderSystem = (() => {
     folderTree = loadFolderTree();
     bindEvents();
     renderDashboardFolders();
+    updateWorkspaceStats();
     restorePersistedFolderViewState();
 
     const previewApi = getFilePreviewApi();
@@ -903,6 +964,7 @@ const FolderSystem = (() => {
     folderTree = Array.isArray(tree) ? tree.map(normalizeFolderEntry) : [];
     localStorage.setItem(FOLDER_TREE_STORAGE_KEY, JSON.stringify(folderTree));
     notifySearchDataChanged("folders");
+    updateWorkspaceStats();
   }
 
   function persistFolderViewState(isOpen, folderId = "") {
@@ -2112,6 +2174,8 @@ const NavigationSystem = (() => {
   const elements = {
     sidebar: document.getElementById("sidebar"),
     sidebarToggle: document.getElementById("sidebarToggle"),
+    mobileMenuToggle: document.getElementById("mobileMenuToggle"),
+    sidebarOverlay: document.getElementById("sidebarOverlay"),
     sidebarNav: document.getElementById("sidebarNav"),
     mainContent: document.querySelector(".main-content"),
     dashboardHeader: document.querySelector(".dashboard-header"),
@@ -2121,8 +2185,7 @@ const NavigationSystem = (() => {
       dashboard: document.getElementById("dashboardView"),
       files: document.getElementById("foldersSection"),
       tasks: document.getElementById("tasksSection"),
-      notes: document.getElementById("notesSection"),
-      ai: document.getElementById("aiSection")
+      notes: document.getElementById("notesSection")
     }
   };
 
@@ -2149,7 +2212,16 @@ const NavigationSystem = (() => {
       elements.sidebarToggle.addEventListener("click", handleSidebarToggle);
     }
 
+    if(elements.mobileMenuToggle) {
+      elements.mobileMenuToggle.addEventListener("click", handleMobileMenuToggle);
+    }
+
+    if(elements.sidebarOverlay) {
+      elements.sidebarOverlay.addEventListener("click", closeMobileSidebar);
+    }
+
     document.addEventListener("click", handleOutsideSidebarClick);
+    document.addEventListener("keydown", handleSidebarKeydown);
     window.addEventListener("resize", handleResize);
     elements.mainContent.addEventListener("scroll", handleMainScroll, { passive: true });
 
@@ -2199,8 +2271,8 @@ const NavigationSystem = (() => {
 
     event.stopPropagation();
 
-    if(window.innerWidth <= 980) {
-      elements.sidebar.classList.toggle("open");
+    if(isMobileSidebarMode()) {
+      setMobileSidebarOpen(!elements.sidebar.classList.contains("open"));
       return;
     }
 
@@ -2208,23 +2280,40 @@ const NavigationSystem = (() => {
 
   }
 
+  function handleMobileMenuToggle(event) {
+
+    event.stopPropagation();
+    setMobileSidebarOpen(!elements.sidebar.classList.contains("open"));
+
+  }
+
+  function handleSidebarKeydown(event) {
+
+    if(event.key === "Escape" && elements.sidebar.classList.contains("open")) {
+      closeMobileSidebar();
+      elements.mobileMenuToggle?.focus();
+    }
+
+  }
+
   function handleOutsideSidebarClick(event) {
 
-    if(window.innerWidth > 980) return;
+    if(!isMobileSidebarMode()) return;
 
     if(
       !elements.sidebar.contains(event.target) &&
-      !elements.sidebarToggle?.contains(event.target)
+      !elements.sidebarToggle?.contains(event.target) &&
+      !elements.mobileMenuToggle?.contains(event.target)
     ) {
-      elements.sidebar.classList.remove("open");
+      closeMobileSidebar();
     }
 
   }
 
   function handleResize() {
 
-    if(window.innerWidth > 980) {
-      elements.sidebar.classList.remove("open");
+    if(!isMobileSidebarMode()) {
+      closeMobileSidebar();
       return;
     }
 
@@ -2243,8 +2332,7 @@ const NavigationSystem = (() => {
       "dashboard",
       "files",
       "tasks",
-      "notes",
-      "ai"
+      "notes"
     ];
 
     let resolved =
@@ -2321,9 +2409,34 @@ const NavigationSystem = (() => {
 
   function closeMobileSidebar() {
 
-    if(window.innerWidth <= 980) {
-      elements.sidebar.classList.remove("open");
-    }
+    setMobileSidebarOpen(false);
+
+  }
+
+  function setMobileSidebarOpen(shouldOpen) {
+
+    const isOpen = Boolean(shouldOpen);
+
+    elements.sidebar.classList.toggle("open", isOpen);
+    elements.sidebar.classList.remove("active");
+    elements.sidebarOverlay?.classList.toggle("is-visible", isOpen);
+    elements.sidebarOverlay?.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    elements.mobileMenuToggle?.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    elements.mobileMenuToggle?.setAttribute(
+      "aria-label",
+      isOpen ? "Close navigation menu" : "Open navigation menu"
+    );
+    document.body.classList.toggle("sidebar-open", isOpen);
+
+  }
+
+  function isMobileSidebarMode() {
+
+    const isCoarseTablet =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 1200px) and (pointer: coarse)").matches;
+
+    return window.innerWidth <= 992 || isCoarseTablet;
 
   }
 
@@ -2448,553 +2561,4 @@ window.NotePilotSearchBridge = {
   }
 };
 
-/* ---------------- NOTEPILOT AI SUMMARIZER ---------------- */
-
-const chatMessages =
-  document.getElementById("chatMessages");
-
-const aiFileInput =
-  document.getElementById("aiFileInput");
-
-const attachFileBtn =
-  document.getElementById("attachFileBtn");
-
-const summarizeBtn =
-  document.getElementById("summarizeBtn");
-
-const uploadedFilePreview =
-  document.getElementById("uploadedFilePreview");
-
-const pastedNotesInput =
-  document.getElementById("pastedNotesInput");
-
-const summarizerState = {
-  file: null,
-  extractedText: "",
-  pendingSource: ""
-};
-
-const extractorMap = {
-  txt: extractTextFromTxt,
-  pdf: extractTextFromPdfFuture,
-  docx: extractTextFromDocxFuture
-};
-
-function appendAssistantBubble(text) {
-
-  if(!chatMessages) return;
-
-  const row =
-    document.createElement("div");
-
-  row.className = "chat-row bot";
-
-  const bubble =
-    document.createElement("div");
-
-  bubble.className = "message-bubble";
-
-  bubble.innerHTML = text;
-
-  row.appendChild(bubble);
-
-  chatMessages.appendChild(row);
-
-  chatMessages.scrollTop =
-    chatMessages.scrollHeight;
-
-}
-
-function showTypingIndicator() {
-
-  if(!chatMessages) return null;
-
-  const row =
-    document.createElement("div");
-
-  row.className = "chat-row bot";
-
-  const bubble =
-    document.createElement("div");
-
-  bubble.className = "message-bubble";
-
-  bubble.innerHTML = `
-    <div class="processing-state">
-      <span class="processing-label">Analyzing content</span>
-      <div class="typing-bubble">
-        <span></span><span></span><span></span>
-      </div>
-    </div>
-  `;
-
-  row.appendChild(bubble);
-
-  chatMessages.appendChild(row);
-
-  chatMessages.scrollTop =
-    chatMessages.scrollHeight;
-
-  return row;
-
-}
-
-function getExtension(name) {
-
-  if(!name || !name.includes(".")) return "";
-
-  return name.split(".").pop().toLowerCase();
-
-}
-
-function formatFileSize(bytes) {
-
-  if(!bytes) return "0 B";
-  if(bytes < 1024) return `${bytes} B`;
-  if(bytes < 1024 * 1024) return `${Math.round(bytes / 102.4) / 10} KB`;
-
-  return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`;
-
-}
-
-function renderUploadedFileCard(file) {
-
-  if(!uploadedFilePreview) return;
-
-  uploadedFilePreview.classList.remove("hidden");
-
-  const ext =
-    getExtension(file.name).toUpperCase() || "FILE";
-
-  uploadedFilePreview.innerHTML = `
-    <span class="file-chip-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
-        <path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm12-2v6h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </span>
-    <div class="file-chip-meta">
-      <p class="file-chip-name">${file.name}</p>
-      <p class="file-chip-type">${ext} - ${formatFileSize(file.size || 0)}</p>
-    </div>
-  `;
-
-}
-
-function extractTextFromTxt(file) {
-
-  return file.text();
-
-}
-
-function extractTextFromPdfFuture() {
-
-  return Promise.resolve("[PDF extractor placeholder] Integrate parser in next version.");
-
-}
-
-function extractTextFromDocxFuture() {
-
-  return Promise.resolve("[DOCX extractor placeholder] Integrate parser in next version.");
-
-}
-
-function cleanText(text) {
-
-  return text
-    .replace(/\r/g, " ")
-    .replace(/\n+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-}
-
-function summarizeText(text) {
-
-  const cleaned =
-    cleanText(text);
-
-  if(!cleaned) {
-    return {
-      html: "<p>I could not find enough text to summarize.</p>",
-      sourceWords: 0,
-      summaryWords: 0,
-      sentenceCount: 0,
-      keywords: []
-    };
-  }
-
-  const sentences =
-    splitIntoSentences(cleaned);
-
-  const sourceWords =
-    countWords(cleaned);
-
-  if(sentences.length <= 2 || sourceWords < 30) {
-    const compact =
-      sentences.slice(0, 1).join(" ");
-
-    return {
-      html: formatSummaryHtml({
-        summaryText: compact || cleaned
-      }),
-      sourceWords,
-      summaryWords: countWords(compact || cleaned),
-      sentenceCount: sentences.length,
-      keywords: getTopKeywords(cleaned, 5)
-    };
-  }
-
-  const frequencyMap =
-    buildFrequencyMap(cleaned);
-
-  const ranked =
-    scoreSentences(sentences, frequencyMap);
-
-  const targetCount =
-    getTargetSummarySentenceCount(sentences.length);
-
-  const selected =
-    selectBestSentences(ranked, targetCount);
-
-  const conciseSummary =
-    buildFinalSummary(selected);
-
-  const keywords =
-    getTopKeywords(cleaned, 6);
-
-  const summaryWords =
-    countWords(conciseSummary);
-
-  return {
-    html: formatSummaryHtml({
-      summaryText: conciseSummary
-    }),
-    sourceWords,
-    summaryWords,
-    sentenceCount: sentences.length,
-    keywords
-  };
-
-}
-
-function splitIntoSentences(text) {
-
-  const normalized =
-    text
-      .replace(/([.!?])(?=[A-Z0-9])/g, "$1 ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-  return normalized
-    .match(/[^.!?]+[.!?]+|[^.!?]+$/g)
-    ?.map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 0) || [];
-
-}
-
-function countWords(text) {
-
-  return text
-    .split(/\s+/)
-    .filter(Boolean).length;
-
-}
-
-function getStopwords() {
-
-  return new Set([
-    "the","and","for","that","with","this","from","your","have","are","was","were","but","not","you","about","into","their","they","them","will","can","has","had","our","its","also","use","using","been","more","than","then","very","just","such","over","some","much","many","only","even","when","what","where","while","because","could","would","should","there","here","those","these","after","before","between","through","under","again","each","both","same","any","all","out","too","may","might","must","shall","able","like","well","make","made","does","did","doing","done","get","gets","got"
-  ]);
-
-}
-
-function tokenizeMeaningfulWords(text) {
-
-  const stopwords =
-    getStopwords();
-
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((word) => word.length > 2 && !stopwords.has(word));
-
-}
-
-function buildFrequencyMap(text) {
-
-  const words =
-    tokenizeMeaningfulWords(text);
-
-  const map = {};
-
-  words.forEach((word) => {
-    map[word] = (map[word] || 0) + 1;
-  });
-
-  const maxFrequency =
-    Math.max(...Object.values(map), 1);
-
-  Object.keys(map).forEach((word) => {
-    map[word] = map[word] / maxFrequency;
-  });
-
-  return map;
-
-}
-
-function scoreSentences(sentences, frequencyMap) {
-
-  return sentences.map((sentence, index) => {
-
-    const tokens =
-      tokenizeMeaningfulWords(sentence);
-
-    const tokenCount =
-      tokens.length || 1;
-
-    let score = 0;
-
-    tokens.forEach((token) => {
-      score += frequencyMap[token] || 0;
-    });
-
-    const densityScore =
-      score / tokenCount;
-
-    const lengthPenalty =
-      tokenCount > 32 ? 0.86 : 1;
-
-    const positionBoost =
-      index === 0 || index === sentences.length - 1 ? 1.08 : 1;
-
-    return {
-      index,
-      sentence,
-      tokens,
-      score: densityScore * lengthPenalty * positionBoost
-    };
-
-  });
-
-}
-
-function getTargetSummarySentenceCount(totalSentences) {
-
-  if(totalSentences <= 4) return 1;
-  if(totalSentences <= 10) return 2;
-  if(totalSentences <= 18) return 3;
-
-  return 4;
-
-}
-
-function sentenceSimilarity(tokensA, tokensB) {
-
-  if(!tokensA.length || !tokensB.length) return 0;
-
-  const setA =
-    new Set(tokensA);
-
-  const setB =
-    new Set(tokensB);
-
-  let overlap = 0;
-
-  setA.forEach((token) => {
-    if(setB.has(token)) overlap += 1;
-  });
-
-  return overlap / Math.min(setA.size, setB.size);
-
-}
-
-function selectBestSentences(ranked, targetCount) {
-
-  const byScore =
-    [...ranked].sort((a, b) => b.score - a.score);
-
-  const selected = [];
-
-  byScore.forEach((candidate) => {
-
-    if(selected.length >= targetCount) return;
-
-    const tooSimilar =
-      selected.some((picked) => sentenceSimilarity(candidate.tokens, picked.tokens) > 0.72);
-
-    if(!tooSimilar) {
-      selected.push(candidate);
-    }
-
-  });
-
-  if(selected.length < targetCount) {
-    byScore.forEach((candidate) => {
-      if(selected.length >= targetCount) return;
-      if(!selected.find((item) => item.index === candidate.index)) {
-        selected.push(candidate);
-      }
-    });
-  }
-
-  return selected
-    .sort((a, b) => a.index - b.index)
-    .map((item) => trimSentence(item.sentence));
-
-}
-
-function trimSentence(sentence) {
-
-  return sentence
-    .replace(/^\s*(and|but|so|because)\s+/i, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-}
-
-function buildFinalSummary(sentences) {
-
-  if(!sentences.length) return "";
-
-  return sentences.join(" ");
-
-}
-
-function getTopKeywords(text, limit = 5) {
-
-  const counts = {};
-
-  tokenizeMeaningfulWords(text).forEach((word) => {
-    counts[word] = (counts[word] || 0) + 1;
-  });
-
-  return Object.keys(counts)
-    .sort((a, b) => counts[b] - counts[a])
-    .slice(0, limit);
-
-}
-
-function escapeHtml(text) {
-
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-}
-
-function formatSummaryHtml({
-  summaryText
-}) {
-
-  return `
-    <div class="summary-panel">
-      <div class="summary-header">
-        <svg class="summary-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3l2.6 2.6L18 6l-1.4 3.4L19 12l-2.4 2.6L18 18l-3.4.4L12 21l-2.6-2.6L6 18l1.4-3.4L5 12l2.4-2.6L6 6l3.4-.4L12 3zm0 5.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-        </svg>
-        <h3 class="summary-title">Summary</h3>
-      </div>
-      <div class="summary-divider"></div>
-      <p class="summary-text">${escapeHtml(summaryText)}</p>
-    </div>
-  `;
-
-}
-
-async function readSelectedFile(file) {
-
-  const extension =
-    getExtension(file.name);
-
-  const extractor =
-    extractorMap[extension];
-
-  if(!extractor) {
-    return "";
-  }
-
-  return extractor(file);
-
-}
-
-async function runSummarization() {
-
-  const pastedText =
-    pastedNotesInput ? pastedNotesInput.value.trim() : "";
-
-  const sourceText =
-    pastedText || summarizerState.extractedText;
-
-  if(!sourceText) {
-    appendAssistantBubble("Please upload a .txt file or paste notes first.");
-    return;
-  }
-
-  const typingRow =
-    showTypingIndicator();
-
-  await new Promise((resolve) => setTimeout(resolve, 1050));
-
-  if(typingRow) typingRow.remove();
-
-  const summaryResult =
-    summarizeText(sourceText);
-
-  appendAssistantBubble(summaryResult.html);
-
-}
-
-if(attachFileBtn && aiFileInput) {
-
-  attachFileBtn.addEventListener("click", () => {
-    aiFileInput.click();
-  });
-
-}
-
-if(aiFileInput) {
-
-  aiFileInput.addEventListener("change", async () => {
-
-    const file =
-      aiFileInput.files[0];
-
-    if(!file) return;
-
-    summarizerState.file = file;
-
-    renderUploadedFileCard(file);
-
-    const extension =
-      getExtension(file.name);
-
-    if(extension !== "txt") {
-      summarizerState.extractedText = "";
-      appendAssistantBubble("Version 1 currently summarizes .txt files and pasted notes. PDF/DOCX support is prepared for next versions.");
-      return;
-    }
-
-    const extracted =
-      await readSelectedFile(file);
-
-    summarizerState.extractedText =
-      cleanText(extracted);
-
-    appendAssistantBubble(`Loaded <strong>${file.name}</strong>. Click <strong>Summarize File</strong> when ready.`);
-
-  });
-
-}
-
-if(summarizeBtn) {
-
-  summarizeBtn.addEventListener("click", () => {
-    runSummarization();
-  });
-
-}
 

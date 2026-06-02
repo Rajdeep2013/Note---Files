@@ -65,16 +65,6 @@
           <span class="nav-text">Files</span>
         </a>
       </li>
-      <li class="nav-item" data-nav-target="ai">
-        <a href="#" class="nav-link">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3a8 8 0 0 1 8 8v2a3 3 0 0 1-3 3h-2l-3 3v-3H8a4 4 0 0 1-4-4 9 9 0 0 1 8-9z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <span class="nav-text">NotePilot AI</span>
-        </a>
-      </li>
       <li class="nav-item" data-nav-target="settings">
         <a href="#" class="nav-link">
           <span class="nav-icon">
@@ -97,11 +87,17 @@
       </li>
     </ul>
   </aside>
+  <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
 
   <main class="main-content">
     <header class="dashboard-header">
       <div class="top-nav">
         <div class="top-nav-left">
+          <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open navigation menu" aria-controls="sidebar" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
           <div class="top-nav-title">
             <strong>Note - Files</strong>
             <small>Productivity Workspace</small>
@@ -151,6 +147,37 @@
     </header>
 
     <section id="dashboardView" class="dashboard-section">
+      <div class="dashboard-stats dashboard-panel">
+        <div class="stat-card">
+          <div class="stat-card-icon">📁</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Folders</p>
+            <strong id="totalFoldersCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">📄</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Files</p>
+            <strong id="totalFilesCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">📝</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Notes</p>
+            <strong id="totalNotesCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">✅</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Tasks</p>
+            <strong id="totalTasksCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+      </div>
+
       <div class="folders-container dashboard-panel" id="foldersSection">
         <div class="folder-panel-header">
           <div>
@@ -197,49 +224,6 @@
           </div>
         </div>
 
-        <div class="widget-card ai-card" id="aiSection">
-          <div class="chat-header">
-            <div class="ai-brand">
-              <span class="ai-badge-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 3l2.6 2.6L18 6l-1.4 3.4L19 12l-2.4 2.6L18 18l-3.4.4L12 21l-2.6-2.6L6 18l1.4-3.4L5 12l2.4-2.6L6 6l3.4-.4L12 3zm0 5.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                </svg>
-              </span>
-              <div class="ai-brand-text">
-                <h2>NotePilot AI</h2>
-                <p>Your smart productivity assistant</p>
-              </div>
-            </div>
-            <span class="chat-status">Online</span>
-          </div>
-
-          <div id="chatMessages" class="chat-messages">
-            <div class="chat-row bot">
-              <div class="message-bubble">
-                Upload a `.txt` file or paste notes below, then click <strong>Summarize File</strong>.
-              </div>
-            </div>
-          </div>
-
-          <div class="summarizer-workspace">
-            <div class="summarizer-toolbar">
-              <input id="aiFileInput" type="file" accept=".txt,text/plain" hidden>
-              <button id="attachFileBtn" type="button" class="attach-btn">
-                Attach File
-              </button>
-              <button id="summarizeBtn" type="button" class="summarize-btn">
-                Summarize File
-              </button>
-            </div>
-
-            <div id="uploadedFilePreview" class="uploaded-file-preview hidden"></div>
-
-            <textarea
-              id="pastedNotesInput"
-              class="pasted-notes-input"
-              placeholder="Or paste notes here for instant summarization..."></textarea>
-          </div>
-        </div>
       </div>
     </section>
 

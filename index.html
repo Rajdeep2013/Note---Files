@@ -9,6 +9,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Orbitron:wght@600;700;800&family=Poppins:ital,wght@0,600;0,700;1,600;1,700&family=Rajdhani:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- File Preview Libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 
 <body class="dashboard-body">
@@ -255,7 +260,7 @@
 
         <div class="folder-section">
           <h3>Files</h3>
-          <input type="file" id="fileInput" hidden>
+          <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.avif,.pdf,.txt,.md,.csv,.log,.json,.js,.ts,.html,.css,.xml,.yml,.yaml,.doc,.docx,.rtf,.xls,.xlsx,.ppt,.pptx" hidden>
           <div id="filesList"></div>
         </div>
       </div>
@@ -270,8 +275,8 @@
             <span id="previewTypeBadge" class="preview-type-badge">FILE</span>
           </div>
           <div class="preview-header-actions">
-            <a id="previewDownloadBtn" class="preview-download-btn is-disabled" href="#" download aria-disabled="true">Download</a>
-            <button id="previewMaxBtn" type="button" class="preview-window-btn preview-max-btn" aria-pressed="false" aria-label="Maximize preview">
+            <a id="previewDownloadBtn" class="preview-download-btn is-disabled" href="#" download aria-disabled="true" aria-label="Download file">Download</a>
+            <button id="previewMaxBtn" type="button" class="preview-window-btn preview-max-btn" aria-pressed="false" aria-label="Maximize preview" title="Maximize preview">
               <span class="preview-window-icon preview-window-icon-max" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none">
                   <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>

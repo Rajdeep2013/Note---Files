@@ -1549,9 +1549,20 @@ FolderSystem = (() => {
               accept: {
                 "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"],
                 "application/pdf": [".pdf"],
-                "text/plain": [".txt"],
+                "text/plain": [".txt", ".md", ".log"],
+                "text/csv": [".csv"],
+                "application/json": [".json"],
+                "text/javascript": [".js", ".ts"],
+                "text/html": [".html"],
+                "text/css": [".css"],
+                "application/xml": [".xml"],
+                "text/yaml": [".yml", ".yaml"],
                 "application/msword": [".doc"],
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+                "application/vnd.ms-excel": [".xls"],
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+                "application/vnd.ms-powerpoint": [".ppt"],
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
                 "application/rtf": [".rtf"]
               }
             }
@@ -1849,7 +1860,9 @@ FolderSystem = (() => {
       if(record.data) {
         const fileData = record.data instanceof ArrayBuffer
           ? record.data
-          : (ArrayBuffer.isView(record.data) ? record.data.buffer : null);
+          : (ArrayBuffer.isView(record.data)
+            ? record.data.buffer.slice(record.data.byteOffset, record.data.byteOffset + record.data.byteLength)
+            : null);
 
         if(fileData) {
           return new Blob([fileData], {
@@ -2122,6 +2135,22 @@ FolderSystem = (() => {
       return `
         <svg viewBox="0 0 24 24">
           <path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm12-2v6h6M8 12h8M8 16h8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    if(["xls", "xlsx", "csv"].includes(extension)) {
+      return `
+        <svg viewBox="0 0 24 24">
+          <path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm12-2v6h6M8 11h8M8 15h8M11 9v8M15 9v8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    if(["ppt", "pptx"].includes(extension)) {
+      return `
+        <svg viewBox="0 0 24 24">
+          <path d="M4 5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm12-2v6h6M8 11h7M8 15h4m4-1.5 2.5 1.5-2.5 1.5v-3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       `;
     }

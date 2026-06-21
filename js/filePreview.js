@@ -1,19 +1,85 @@
 (() => {
   "use strict";
 
-  const SUPPORTED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
-  const SUPPORTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+  const SUPPORTED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "svg", "bmp", "avif"]);
+  const SUPPORTED_IMAGE_MIME_TYPES = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/svg+xml",
+    "image/bmp",
+    "image/avif"
+  ]);
 
-  const SUPPORTED_TEXT_EXTENSIONS = new Set(["txt", "md", "json", "js", "html", "css"]);
+  const SUPPORTED_CODE_EXTENSIONS = new Set([
+    "js",
+    "ts",
+    "jsx",
+    "tsx",
+    "json",
+    "html",
+    "css",
+    "xml",
+    "yaml",
+    "yml",
+    "py",
+    "java",
+    "c",
+    "cpp",
+    "cs",
+    "php",
+    "rb",
+    "go",
+    "rs",
+    "sql",
+    "sh",
+    "bat",
+    "ps1"
+  ]);
+
+  const SUPPORTED_TEXT_EXTENSIONS = new Set([
+    "txt",
+    "md",
+    "markdown",
+    "csv",
+    "log",
+    "rtf",
+    ...SUPPORTED_CODE_EXTENSIONS
+  ]);
+
   const SUPPORTED_TEXT_MIME_TYPES = new Set([
     "application/json",
     "application/javascript",
     "text/javascript",
     "application/x-javascript",
-    "text/markdown"
+    "text/markdown",
+    "text/xml",
+    "application/xml",
+    "application/xhtml+xml",
+    "text/csv",
+    "application/csv",
+    "application/rtf"
   ]);
 
+  const OFFICE_MIME_TYPES = {
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    xls: "application/vnd.ms-excel",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ppt: "application/vnd.ms-powerpoint"
+  };
+
   const MAX_TEXT_PREVIEW_BYTES = 1024 * 1024;
+  const MAX_DOCX_PREVIEW_BYTES = 25 * 1024 * 1024;
+  const MAX_XLSX_PREVIEW_BYTES = 25 * 1024 * 1024;
+  const MAX_EXCEL_ROWS = 100;
+  const MAX_EXCEL_COLUMNS = 50;
+  const MAX_SHEET_TABS = 12;
+  const MAX_PPTX_PREVIEW_BYTES = 35 * 1024 * 1024;
+  const MAX_PPTX_SLIDES = 24;
+  const MAX_PPTX_XML_BYTES = 4 * 1024 * 1024;
+  const MAX_PPTX_SLIDE_TEXT = 1800;
 
   const state = {
     initialized: false,
@@ -22,7 +88,9 @@
     imageScale: 1,
     requestToken: 0,
     closeTimerId: null,
-    objectUrls: new Set()
+    objectUrls: new Set(),
+    currentFileEntry: null,
+    xlsxWorkbook: null
   };
 
   const elements = {
@@ -121,8 +189,20 @@
         updateImageZoom(0.2);
       } else if(action === "out") {
         updateImageZoom(-0.2);
+      } else if(action === "actual") {
+        setImageZoom(1, "actual");
       } else {
-        setImageZoom(1);
+        setImageZoom(1, "fit");
+      }
+      return;
+    }
+
+    const sheetButton = event.target.closest("[data-preview-sheet]");
+
+    if(sheetButton) {
+      const sheetIndex = Number(sheetButton.dataset.previewSheet);
+      if(Number.isInteger(sheetIndex)) {
+        renderXlsxSheet(sheetIndex);
       }
       return;
     }
@@ -142,12 +222,7 @@
     }
 
     event.preventDefault();
-
-    if(event.deltaY < 0) {
-      updateImageZoom(0.15);
-    } else {
-      updateImageZoom(-0.15);
-    }
+    updateImageZoom(event.deltaY < 0 ? 0.15 : -0.15);
   }
 
   function handleViewportResize() {
@@ -166,6 +241,8 @@
       return;
     }
 
+    state.currentFileEntry = file;
+    state.xlsxWorkbook = null;
     const requestToken = ++state.requestToken;
 
     showModal();
@@ -199,11 +276,17 @@
         renderPdfPreview(file, blob, downloadUrl);
       } else if(typeInfo.kind === "text") {
         await renderTextPreview(file, blob, typeInfo);
+      } else if(typeInfo.kind === "docx") {
+        await renderDocxPreview(file, blob);
+      } else if(typeInfo.kind === "xlsx") {
+        await renderXlsxPreview(file, blob);
+      } else if(typeInfo.kind === "pptx") {
+        await renderPptxPreview(file, blob, typeInfo);
       } else {
         renderUnsupportedPreview(file, typeInfo, options.iconSvg);
       }
-    } catch {
-      setError("Unable to open this file safely. Please use the download button.");
+    } catch(error) {
+      setError(`Unable to preview file: ${error?.message || "Unknown error"}`);
       renderUnsupportedPreview(file, typeInfo, options.iconSvg);
     }
 
@@ -229,7 +312,7 @@
     const source = blobUrl || (isSafeImageDataUrl(file.previewDataUrl) ? file.previewDataUrl : "");
 
     if(!source) {
-      setError("Image preview is not available for this file.");
+      setError("Image preview is not available for this file. Re-upload it, then try again.");
       renderUnsupportedPreview(file, detectFileType(file), "");
       return;
     }
@@ -238,14 +321,15 @@
 
     elements.content.innerHTML = `
       <div class="preview-image-shell">
-        <div class="preview-image-controls">
+        <div class="preview-image-controls" aria-label="Image preview controls">
+          <button type="button" class="preview-zoom-btn" data-preview-zoom="fit" aria-label="Fit image to screen">Fit</button>
+          <button type="button" class="preview-zoom-btn" data-preview-zoom="actual" aria-label="Show image at actual size">100%</button>
           <button type="button" class="preview-zoom-btn" data-preview-zoom="out" aria-label="Zoom out">-</button>
-          <span class="preview-zoom-label">100%</span>
+          <span class="preview-zoom-label">Fit</span>
           <button type="button" class="preview-zoom-btn" data-preview-zoom="in" aria-label="Zoom in">+</button>
-          <button type="button" class="preview-zoom-btn" data-preview-zoom="reset" aria-label="Reset zoom">Reset</button>
         </div>
         <div class="preview-image-stage">
-          <img src="${escapeHtml(source)}" alt="${escapeHtml(file.name)}" class="preview-image">
+          <img src="${escapeHtml(source)}" alt="${escapeHtml(file.name)}" class="preview-image is-fit">
         </div>
       </div>
     `;
@@ -253,7 +337,7 @@
 
   function renderPdfPreview(file, blob, existingUrl = "") {
     if(!(blob instanceof Blob)) {
-      setError("PDF preview needs stored file data. Please re-upload this file.");
+      setError("PDF preview needs stored file data. Re-upload this PDF, then try again.");
       renderUnsupportedPreview(file, detectFileType(file), "");
       return;
     }
@@ -263,7 +347,7 @@
 
     elements.content.innerHTML = `
       <div class="preview-pdf-shell">
-        <iframe class="preview-pdf-frame" src="${escapeHtml(pdfUrl)}#toolbar=1&navpanes=0" title="${escapeHtml(file.name)}"></iframe>
+        <iframe class="preview-pdf-frame" src="${escapeHtml(pdfUrl)}#toolbar=1&navpanes=0" title="${escapeHtml(file.name)}" allow="fullscreen"></iframe>
       </div>
     `;
   }
@@ -272,22 +356,457 @@
     const text = await getTextPreviewContent(blob, file.textData);
 
     if(text === null) {
-      setError("Text preview is unavailable for this file.");
+      setError("Text preview is unavailable for this file. Re-upload it, then try again.");
       renderUnsupportedPreview(file, typeInfo, "");
       return;
     }
 
     const extensionLabel = typeInfo.extension ? typeInfo.extension.toUpperCase() : "TEXT";
+    const shouldHighlight = isCodeType(typeInfo.extension, typeInfo.mime);
+
+    if(!shouldHighlight) {
+      elements.content.innerHTML = `
+        <div class="preview-text-shell">
+          <div class="preview-text-head">
+            <span class="preview-text-title">Text Preview</span>
+            <span class="preview-text-lang">${escapeHtml(extensionLabel)}</span>
+          </div>
+          <pre class="preview-text-block preview-plain-text"><code>${escapeHtml(text)}</code></pre>
+        </div>
+      `;
+      return;
+    }
+
+    let codeHtml = escapeHtml(text);
+    let languageLabel = extensionLabel;
+
+    if(typeof hljs !== "undefined") {
+      try {
+        const language = getHighlightLanguage(typeInfo.extension);
+        const highlighted = hljs.highlight(text, { language, ignoreIllegals: true });
+        codeHtml = highlighted.value;
+        languageLabel = language.toUpperCase();
+      } catch {
+        codeHtml = escapeHtml(text);
+      }
+    }
 
     elements.content.innerHTML = `
-      <div class="preview-text-shell">
+      <div class="preview-text-shell preview-code-shell">
         <div class="preview-text-head">
-          <span class="preview-text-title">Code / Text Preview</span>
-          <span class="preview-text-lang">${escapeHtml(extensionLabel)}</span>
+          <span class="preview-text-title">Code Preview</span>
+          <span class="preview-text-lang">${escapeHtml(languageLabel)}</span>
         </div>
-        <pre class="preview-text-block"><code>${escapeHtml(text)}</code></pre>
+        <div class="preview-code-grid">
+          <pre class="preview-line-numbers" aria-hidden="true">${buildLineNumbers(text)}</pre>
+          <pre class="preview-text-block preview-code-highlighted"><code>${codeHtml}</code></pre>
+        </div>
       </div>
     `;
+  }
+
+  async function renderDocxPreview(file, blob) {
+    if(!(blob instanceof Blob)) {
+      setError("DOCX preview requires stored file data. Re-upload this DOCX, then try again.");
+      renderUnsupportedPreview(file, detectFileType(file), "");
+      return;
+    }
+
+    if(blob.size > MAX_DOCX_PREVIEW_BYTES) {
+      setError(`This DOCX is too large to preview safely in the browser. Download it to view the full document.`);
+      renderUnsupportedPreview(file, detectFileType(file), "");
+      return;
+    }
+
+    if(typeof mammoth === "undefined" || typeof mammoth.convertToHtml !== "function") {
+      setError("DOCX preview library is not available. Check your connection, refresh the app, and try again.");
+      renderUnsupportedPreview(file, detectFileType(file), "");
+      return;
+    }
+
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const result = await mammoth.convertToHtml(
+        { arrayBuffer },
+        {
+          styleMap: [
+            "p[style-name='Title'] => h1:fresh",
+            "p[style-name='Subtitle'] => p:fresh"
+          ]
+        }
+      );
+
+      const safeHtml = sanitizeDocxHtml(result.value);
+      const messages = Array.isArray(result.messages)
+        ? result.messages.filter((message) => message && message.message)
+        : [];
+
+      elements.content.innerHTML = `
+        <div class="preview-docx-shell">
+          <article class="preview-docx-content">
+            ${safeHtml || "<p>This DOCX did not contain readable document text.</p>"}
+          </article>
+          ${messages.length ? `<p class="preview-docx-note">${escapeHtml(messages.length === 1 ? messages[0].message : `${messages.length} document formatting notices were ignored.`)}</p>` : ""}
+        </div>
+      `;
+    } catch(error) {
+      setError(`We could not read this DOCX. The file may be encrypted, corrupted, or saved in an unsupported Word format.`);
+      renderUnsupportedPreview(file, detectFileType(file), "");
+    }
+  }
+
+  async function renderXlsxPreview(file, blob) {
+    if(!(blob instanceof Blob)) {
+      setError("Excel preview requires stored file data. Re-upload this spreadsheet, then try again.");
+      renderUnsupportedPreview(file, detectFileType(file), "");
+      return;
+    }
+
+    if(blob.size > MAX_XLSX_PREVIEW_BYTES) {
+      setError("This spreadsheet is too large to preview safely in the browser. Download it to view the full workbook.");
+      renderUnsupportedPreview(file, detectFileType(file), "");
+      return;
+    }
+
+    if(typeof XLSX === "undefined" || typeof XLSX.read !== "function") {
+      setError("Spreadsheet preview library is not available. Check your connection, refresh the app, and try again.");
+      renderUnsupportedPreview(file, detectFileType(file), "");
+      return;
+    }
+
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      state.xlsxWorkbook = XLSX.read(arrayBuffer, {
+        type: "array",
+        cellDates: true,
+        dense: false
+      });
+
+      renderXlsxSheet(0);
+    } catch(error) {
+      state.xlsxWorkbook = null;
+      setError(`Failed to preview spreadsheet: ${error?.message || "Unknown error"}`);
+      renderUnsupportedPreview(file, detectFileType(file), "");
+    }
+  }
+
+  function renderXlsxSheet(sheetIndex = 0) {
+    const workbook = state.xlsxWorkbook;
+
+    if(!workbook || !Array.isArray(workbook.SheetNames) || !workbook.SheetNames.length) {
+      setError("This workbook does not contain any readable sheets.");
+      return;
+    }
+
+    const safeIndex = Math.max(0, Math.min(sheetIndex, workbook.SheetNames.length - 1));
+    const sheetName = workbook.SheetNames[safeIndex];
+    const sheet = workbook.Sheets[sheetName];
+
+    if(!sheet) {
+      setError("This sheet could not be read.");
+      return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+      blankrows: false
+    });
+
+    const maxColumns = Math.min(
+      MAX_EXCEL_COLUMNS,
+      Math.max(1, ...rows.map((row) => Array.isArray(row) ? row.length : 0))
+    );
+    const visibleRows = rows.slice(0, MAX_EXCEL_ROWS);
+    const sheetTabs = workbook.SheetNames.slice(0, MAX_SHEET_TABS)
+      .map((name, index) => `
+        <button type="button" class="preview-xlsx-tab ${index === safeIndex ? "is-active" : ""}" data-preview-sheet="${index}">
+          ${escapeHtml(name)}
+        </button>
+      `)
+      .join("");
+
+    const hasHiddenTabs = workbook.SheetNames.length > MAX_SHEET_TABS;
+    const tableHtml = buildSpreadsheetTable(visibleRows, maxColumns);
+    const rowCount = rows.length;
+    const truncatedRows = rowCount > MAX_EXCEL_ROWS;
+    const truncatedColumns = rows.some((row) => Array.isArray(row) && row.length > MAX_EXCEL_COLUMNS);
+
+    elements.content.innerHTML = `
+      <div class="preview-xlsx-shell">
+        <div class="preview-xlsx-meta">
+          <span class="preview-xlsx-sheet">Sheet: ${escapeHtml(sheetName)}</span>
+          <span class="preview-xlsx-count">${workbook.SheetNames.length} sheet${workbook.SheetNames.length !== 1 ? "s" : ""}</span>
+        </div>
+        <div class="preview-xlsx-tabs" role="tablist" aria-label="Workbook sheets">
+          ${sheetTabs}
+          ${hasHiddenTabs ? `<span class="preview-xlsx-tab-note">+${workbook.SheetNames.length - MAX_SHEET_TABS} more</span>` : ""}
+        </div>
+        <div class="preview-xlsx-content">
+          ${tableHtml}
+        </div>
+        ${(truncatedRows || truncatedColumns) ? `<p class="preview-xlsx-note">Showing ${Math.min(rowCount, MAX_EXCEL_ROWS)} rows and up to ${maxColumns} columns for browser performance.</p>` : ""}
+      </div>
+    `;
+  }
+
+  function buildSpreadsheetTable(rows, maxColumns) {
+    if(!rows.length || rows.every((row) => !Array.isArray(row) || row.every((cell) => String(cell || "").trim() === ""))) {
+      return `<div class="preview-xlsx-empty">This sheet is empty.</div>`;
+    }
+
+    const columnHeadings = Array.from({ length: maxColumns }, (_, index) => {
+      return `<th scope="col">${escapeHtml(getSpreadsheetColumnName(index))}</th>`;
+    }).join("");
+
+    const bodyRows = rows.map((row, rowIndex) => {
+      const cells = Array.from({ length: maxColumns }, (_, columnIndex) => {
+        const value = Array.isArray(row) ? row[columnIndex] : "";
+        return `<td>${escapeHtml(formatSpreadsheetCell(value))}</td>`;
+      }).join("");
+
+      return `
+        <tr>
+          <th scope="row">${rowIndex + 1}</th>
+          ${cells}
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <table class="preview-xlsx-table">
+        <thead>
+          <tr>
+            <th class="preview-xlsx-corner" aria-label="Row"></th>
+            ${columnHeadings}
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    `;
+  }
+
+  async function renderPptxPreview(file, blob, typeInfo) {
+    if(!(blob instanceof Blob)) {
+      setError("PowerPoint preview requires stored file data. Re-upload this presentation, then try again.");
+      renderPptxFallback(file);
+      return;
+    }
+
+    if(typeInfo.extension === "ppt" || blob.size > MAX_PPTX_PREVIEW_BYTES) {
+      setError("This presentation cannot be rendered directly in the browser. Download it to view the full slides.");
+      renderPptxFallback(file);
+      return;
+    }
+
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const slides = await extractPptxSlides(arrayBuffer);
+
+      if(!slides.length) {
+        renderPptxFallback(file, "No slide text could be extracted from this PPTX.");
+        return;
+      }
+
+      const slideCards = slides.map((slide) => `
+        <article class="preview-pptx-slide">
+          <div class="preview-pptx-slide-number">Slide ${slide.index}</div>
+          <div class="preview-pptx-slide-text">
+            ${slide.lines.length ? slide.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("") : "<p>No readable text on this slide.</p>"}
+          </div>
+        </article>
+      `).join("");
+
+      elements.content.innerHTML = `
+        <div class="preview-pptx-shell preview-pptx-outline">
+          <div class="preview-pptx-summary">
+            <p class="preview-pptx-title">PowerPoint Outline Preview</p>
+            <p class="preview-pptx-message">Showing extracted slide text. Download the file for full layout, media, animations, and speaker notes.</p>
+          </div>
+          <div class="preview-pptx-slides">
+            ${slideCards}
+          </div>
+          ${slides.length >= MAX_PPTX_SLIDES ? `<p class="preview-pptx-note">Showing the first ${MAX_PPTX_SLIDES} slides.</p>` : ""}
+        </div>
+      `;
+    } catch(error) {
+      setError("PowerPoint outline preview is unavailable for this file. Download it to view the full presentation.");
+      renderPptxFallback(file);
+    }
+  }
+
+  function renderPptxFallback(file, message = "Presentation layout preview is limited in the browser. Download to view full slides.") {
+    elements.content.innerHTML = `
+      <div class="preview-pptx-shell">
+        <div class="preview-unsupported-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 7v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2m-8 3v4m-4-4v4m8-4v4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p class="preview-pptx-title">PowerPoint Preview</p>
+        <p class="preview-pptx-message">${escapeHtml(message)}</p>
+        <button type="button" class="preview-inline-download" data-preview-download>Download Presentation</button>
+      </div>
+    `;
+  }
+
+  async function extractPptxSlides(arrayBuffer) {
+    const entries = readZipDirectory(arrayBuffer);
+    const slideEntries = entries
+      .filter((entry) => /^ppt\/slides\/slide\d+\.xml$/i.test(entry.name))
+      .sort((first, second) => getSlideNumber(first.name) - getSlideNumber(second.name))
+      .slice(0, MAX_PPTX_SLIDES);
+
+    const slides = [];
+
+    for(const entry of slideEntries) {
+      const xml = await readZipEntryText(arrayBuffer, entry);
+      const lines = extractSlideLines(xml);
+      slides.push({
+        index: getSlideNumber(entry.name),
+        lines
+      });
+    }
+
+    return slides;
+  }
+
+  function readZipDirectory(arrayBuffer) {
+    const view = new DataView(arrayBuffer);
+    const length = view.byteLength;
+    const searchStart = Math.max(0, length - 0xffff - 22);
+    let eocdOffset = -1;
+
+    for(let offset = length - 22; offset >= searchStart; offset--) {
+      if(view.getUint32(offset, true) === 0x06054b50) {
+        eocdOffset = offset;
+        break;
+      }
+    }
+
+    if(eocdOffset < 0) {
+      throw new Error("ZIP directory not found");
+    }
+
+    const totalEntries = view.getUint16(eocdOffset + 10, true);
+    const centralDirectoryOffset = view.getUint32(eocdOffset + 16, true);
+    const decoder = new TextDecoder("utf-8");
+    const entries = [];
+    let offset = centralDirectoryOffset;
+
+    for(let index = 0; index < totalEntries && offset + 46 <= length; index++) {
+      if(view.getUint32(offset, true) !== 0x02014b50) {
+        break;
+      }
+
+      const method = view.getUint16(offset + 10, true);
+      const compressedSize = view.getUint32(offset + 20, true);
+      const uncompressedSize = view.getUint32(offset + 24, true);
+      const fileNameLength = view.getUint16(offset + 28, true);
+      const extraLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const localHeaderOffset = view.getUint32(offset + 42, true);
+      const nameStart = offset + 46;
+      const nameBytes = new Uint8Array(arrayBuffer, nameStart, fileNameLength);
+      const name = decoder.decode(nameBytes);
+
+      entries.push({
+        name,
+        method,
+        compressedSize,
+        uncompressedSize,
+        localHeaderOffset
+      });
+
+      offset += 46 + fileNameLength + extraLength + commentLength;
+    }
+
+    return entries;
+  }
+
+  async function readZipEntryText(arrayBuffer, entry) {
+    if(entry.uncompressedSize > MAX_PPTX_XML_BYTES || entry.compressedSize > MAX_PPTX_XML_BYTES) {
+      throw new Error("Slide XML is too large");
+    }
+
+    const view = new DataView(arrayBuffer);
+
+    if(view.getUint32(entry.localHeaderOffset, true) !== 0x04034b50) {
+      throw new Error("ZIP local header not found");
+    }
+
+    const fileNameLength = view.getUint16(entry.localHeaderOffset + 26, true);
+    const extraLength = view.getUint16(entry.localHeaderOffset + 28, true);
+    const dataStart = entry.localHeaderOffset + 30 + fileNameLength + extraLength;
+    const dataEnd = dataStart + entry.compressedSize;
+
+    if(dataStart < 0 || dataEnd > arrayBuffer.byteLength) {
+      throw new Error("ZIP entry data is invalid");
+    }
+
+    const compressedBytes = new Uint8Array(arrayBuffer, dataStart, entry.compressedSize);
+    let outputBytes = compressedBytes;
+
+    if(entry.method === 8) {
+      outputBytes = await inflateRawBytes(compressedBytes);
+    } else if(entry.method !== 0) {
+      throw new Error("Unsupported ZIP compression method");
+    }
+
+    return new TextDecoder("utf-8").decode(outputBytes);
+  }
+
+  async function inflateRawBytes(bytes) {
+    if(typeof DecompressionStream === "undefined") {
+      throw new Error("Browser does not support ZIP decompression");
+    }
+
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    const arrayBuffer = await new Response(stream).arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+  }
+
+  function extractSlideLines(xml) {
+    const parser = new DOMParser();
+    const documentXml = parser.parseFromString(xml, "application/xml");
+
+    if(documentXml.getElementsByTagName("parsererror").length) {
+      return [];
+    }
+
+    const paragraphs = Array.from(documentXml.getElementsByTagName("*"))
+      .filter((node) => node.localName === "p");
+
+    const lines = paragraphs
+      .map((paragraph) => Array.from(paragraph.getElementsByTagName("*"))
+        .filter((node) => node.localName === "t")
+        .map((node) => node.textContent || "")
+        .join("")
+        .replace(/\s+/g, " ")
+        .trim())
+      .filter(Boolean);
+
+    const uniqueLines = [];
+    const seen = new Set();
+
+    lines.forEach((line) => {
+      const clipped = line.length > MAX_PPTX_SLIDE_TEXT
+        ? `${line.slice(0, MAX_PPTX_SLIDE_TEXT)}...`
+        : line;
+
+      if(!seen.has(clipped)) {
+        uniqueLines.push(clipped);
+        seen.add(clipped);
+      }
+    });
+
+    return uniqueLines;
+  }
+
+  function getSlideNumber(name) {
+    const match = String(name || "").match(/slide(\d+)\.xml$/i);
+    return match ? Number(match[1]) : 0;
   }
 
   async function getTextPreviewContent(blob, fallbackText) {
@@ -305,12 +824,8 @@
 
         return text;
       } catch {
-        // fall through
+        // Fall through to the stored text fallback.
       }
-    }
-
-    if(typeof fallbackText === "string" && fallbackText.trim().length > 0) {
-      return fallbackText;
     }
 
     if(typeof fallbackText === "string") {
@@ -322,9 +837,8 @@
 
   function renderUnsupportedPreview(file, typeInfo, iconSvg) {
     const typeLabel = typeInfo.badge || "FILE";
-    const inlineActionClass = elements.downloadBtn?.classList.contains("is-disabled")
-      ? "preview-inline-download is-disabled"
-      : "preview-inline-download";
+    const isDisabled = elements.downloadBtn?.classList.contains("is-disabled");
+    const inlineActionClass = isDisabled ? "preview-inline-download is-disabled" : "preview-inline-download";
 
     elements.content.innerHTML = `
       <div class="preview-unsupported">
@@ -339,10 +853,10 @@
   }
 
   function updateImageZoom(delta) {
-    setImageZoom(state.imageScale + delta);
+    setImageZoom(state.imageScale + delta, "zoom");
   }
 
-  function setImageZoom(nextScale) {
+  function setImageZoom(nextScale, mode = "zoom") {
     const image = elements.content?.querySelector(".preview-image");
     const label = elements.content?.querySelector(".preview-zoom-label");
 
@@ -350,8 +864,18 @@
       return;
     }
 
-    state.imageScale = Math.max(0.5, Math.min(4, Number(nextScale) || 1));
+    if(mode === "fit") {
+      state.imageScale = 1;
+      image.classList.add("is-fit");
+      image.classList.remove("is-actual");
+      image.style.transform = "scale(1)";
+      label.textContent = "Fit";
+      return;
+    }
 
+    state.imageScale = Math.max(0.25, Math.min(5, Number(nextScale) || 1));
+    image.classList.toggle("is-actual", mode === "actual");
+    image.classList.remove("is-fit");
     image.style.transform = `scale(${state.imageScale})`;
     label.textContent = `${Math.round(state.imageScale * 100)}%`;
   }
@@ -360,7 +884,7 @@
     clearError();
     clearRenderedContent();
     setTitle(file.name || "File Preview");
-    setSubtitle(subtitle || "Previewing file content inside the app");
+    setSubtitle(subtitle || formatFileLabel(file));
     updateTypeBadge("FILE");
     updateDownloadButton("", file.name || "file");
   }
@@ -380,6 +904,10 @@
         "aria-label",
         shouldMaximize ? "Restore preview size" : "Maximize preview"
       );
+      elements.maxBtn.setAttribute(
+        "title",
+        shouldMaximize ? "Restore preview size" : "Maximize preview"
+      );
     }
   }
 
@@ -395,6 +923,7 @@
   function clearRenderedContent() {
     revokeManagedObjectUrls();
     state.imageScale = 1;
+    state.xlsxWorkbook = null;
 
     if(elements.content) {
       elements.content.innerHTML = "";
@@ -485,7 +1014,7 @@
       try {
         URL.revokeObjectURL(url);
       } catch {
-        // best effort
+        // Best effort cleanup.
       }
     });
 
@@ -514,6 +1043,33 @@
       };
     }
 
+    if(extension === "docx" || mime === OFFICE_MIME_TYPES.docx) {
+      return {
+        kind: "docx",
+        extension: "docx",
+        mime,
+        badge: "DOCX"
+      };
+    }
+
+    if(["xlsx", "xls"].includes(extension) || mime === OFFICE_MIME_TYPES.xlsx || mime === OFFICE_MIME_TYPES.xls) {
+      return {
+        kind: "xlsx",
+        extension: extension || (mime === OFFICE_MIME_TYPES.xls ? "xls" : "xlsx"),
+        mime,
+        badge: extension === "xls" || mime === OFFICE_MIME_TYPES.xls ? "XLS" : "XLSX"
+      };
+    }
+
+    if(["pptx", "ppt"].includes(extension) || mime === OFFICE_MIME_TYPES.pptx || mime === OFFICE_MIME_TYPES.ppt) {
+      return {
+        kind: "pptx",
+        extension: extension || (mime === OFFICE_MIME_TYPES.ppt ? "ppt" : "pptx"),
+        mime,
+        badge: extension === "ppt" || mime === OFFICE_MIME_TYPES.ppt ? "PPT" : "PPTX"
+      };
+    }
+
     if(SUPPORTED_TEXT_EXTENSIONS.has(extension) || isTextMime(mime)) {
       return {
         kind: "text",
@@ -539,6 +1095,11 @@
     return mime.startsWith("text/") || SUPPORTED_TEXT_MIME_TYPES.has(mime);
   }
 
+  function isCodeType(extension, mime) {
+    return SUPPORTED_CODE_EXTENSIONS.has(extension) ||
+      ["application/json", "application/javascript", "text/javascript", "application/x-javascript"].includes(mime);
+  }
+
   function normalizeExtension(value) {
     const source = String(value || "").trim().toLowerCase();
 
@@ -552,6 +1113,79 @@
     }
 
     return source;
+  }
+
+  function getHighlightLanguage(extension) {
+    const langMap = {
+      js: "javascript",
+      ts: "typescript",
+      jsx: "javascript",
+      tsx: "typescript",
+      json: "json",
+      html: "xml",
+      css: "css",
+      xml: "xml",
+      yaml: "yaml",
+      yml: "yaml",
+      py: "python",
+      java: "java",
+      c: "c",
+      cpp: "cpp",
+      cs: "csharp",
+      php: "php",
+      rb: "ruby",
+      go: "go",
+      rs: "rust",
+      sql: "sql",
+      sh: "bash",
+      bat: "dos",
+      ps1: "powershell"
+    };
+
+    const language = langMap[extension] || "plaintext";
+
+    if(typeof hljs !== "undefined" && typeof hljs.getLanguage === "function" && !hljs.getLanguage(language)) {
+      return "plaintext";
+    }
+
+    return language;
+  }
+
+  function buildLineNumbers(text) {
+    const lineCount = Math.max(1, String(text || "").split(/\r\n|\r|\n/).length);
+    return Array.from({ length: lineCount }, (_, index) => `<span>${index + 1}</span>`).join("");
+  }
+
+  function formatFileLabel(file) {
+    if(!file) return "File";
+
+    const parts = [];
+
+    if(file.size) {
+      parts.push(formatFileSize(file.size));
+    }
+
+    const ext = normalizeExtension(file.extension || file.name || "");
+    if(ext) {
+      parts.push(ext.toUpperCase());
+    }
+
+    return parts.length > 0 ? parts.join(" - ") : "File";
+  }
+
+  function formatFileSize(bytes) {
+    if(bytes === 0) return "0 B";
+
+    const units = ["B", "KB", "MB", "GB"];
+    const size = Math.abs(bytes);
+    let unitIndex = 0;
+
+    while(size >= 1024 && unitIndex < units.length - 1) {
+      unitIndex++;
+    }
+
+    const value = (bytes / Math.pow(1024, unitIndex)).toFixed(unitIndex === 0 ? 0 : 1);
+    return `${value} ${units[unitIndex]}`;
   }
 
   function normalizeFileEntry(fileEntry) {
@@ -569,8 +1203,158 @@
     };
   }
 
+  function sanitizeDocxHtml(html) {
+    const template = document.createElement("template");
+    template.innerHTML = String(html || "");
+
+    const allowedTags = new Set([
+      "a",
+      "article",
+      "br",
+      "code",
+      "div",
+      "em",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "hr",
+      "img",
+      "li",
+      "ol",
+      "p",
+      "pre",
+      "s",
+      "span",
+      "strong",
+      "sub",
+      "sup",
+      "table",
+      "tbody",
+      "td",
+      "tfoot",
+      "th",
+      "thead",
+      "tr",
+      "u",
+      "ul"
+    ]);
+
+    const cleaned = document.createElement("div");
+
+    Array.from(template.content.childNodes).forEach((child) => {
+      cleaned.appendChild(cleanDocxNode(child, allowedTags));
+    });
+
+    return cleaned.innerHTML;
+  }
+
+  function cleanDocxNode(node, allowedTags) {
+    if(node.nodeType === Node.TEXT_NODE) {
+      return document.createTextNode(node.textContent || "");
+    }
+
+    if(node.nodeType !== Node.ELEMENT_NODE) {
+      return document.createDocumentFragment();
+    }
+
+    const tag = node.tagName.toLowerCase();
+
+    if(!allowedTags.has(tag)) {
+      const fragment = document.createDocumentFragment();
+      Array.from(node.childNodes).forEach((child) => {
+        fragment.appendChild(cleanDocxNode(child, allowedTags));
+      });
+      return fragment;
+    }
+
+    if(tag === "img" && !isSafeEmbeddedImageDataUrl(node.getAttribute("src"))) {
+      return document.createDocumentFragment();
+    }
+
+    const element = document.createElement(tag);
+
+    if(tag === "a") {
+      const href = node.getAttribute("href") || "";
+      if(isSafeDocumentUrl(href)) {
+        element.setAttribute("href", href);
+        element.setAttribute("target", "_blank");
+        element.setAttribute("rel", "noopener noreferrer");
+      }
+      const title = node.getAttribute("title");
+      if(title) {
+        element.setAttribute("title", title);
+      }
+    }
+
+    if(tag === "img") {
+      element.setAttribute("src", node.getAttribute("src"));
+      element.setAttribute("alt", node.getAttribute("alt") || "");
+    }
+
+    if(["td", "th"].includes(tag)) {
+      copyNumericTableSpan(node, element, "colspan");
+      copyNumericTableSpan(node, element, "rowspan");
+    }
+
+    Array.from(node.childNodes).forEach((child) => {
+      element.appendChild(cleanDocxNode(child, allowedTags));
+    });
+
+    return element;
+  }
+
+  function copyNumericTableSpan(source, target, attribute) {
+    const value = Number(source.getAttribute(attribute));
+
+    if(Number.isInteger(value) && value > 1 && value <= 50) {
+      target.setAttribute(attribute, String(value));
+    }
+  }
+
+  function isSafeDocumentUrl(value) {
+    const url = String(value || "").trim();
+
+    if(!url) {
+      return false;
+    }
+
+    return /^(https?:|mailto:|#)/i.test(url);
+  }
+
   function isSafeImageDataUrl(value) {
+    return /^data:image\/(jpeg|jpg|png|webp|gif|svg\+xml|bmp|avif);base64,/i.test(String(value || ""));
+  }
+
+  function isSafeEmbeddedImageDataUrl(value) {
     return /^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(String(value || ""));
+  }
+
+  function formatSpreadsheetCell(value) {
+    if(value === null || value === undefined) {
+      return "";
+    }
+
+    if(value instanceof Date) {
+      return value.toLocaleDateString();
+    }
+
+    return String(value);
+  }
+
+  function getSpreadsheetColumnName(index) {
+    let value = index + 1;
+    let name = "";
+
+    while(value > 0) {
+      const remainder = (value - 1) % 26;
+      name = String.fromCharCode(65 + remainder) + name;
+      value = Math.floor((value - 1) / 26);
+    }
+
+    return name;
   }
 
   function defaultFileIconSvg() {
@@ -586,7 +1370,7 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
+      .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
 
@@ -628,6 +1412,7 @@
     setLoading(false);
     updateTypeBadge("FILE");
     updateDownloadButton("", "file");
+    state.currentFileEntry = null;
 
     clearTimeout(state.closeTimerId);
 

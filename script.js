@@ -159,6 +159,7 @@ const FileDatabase = (() => {
 
 const welcomeText =
   document.getElementById("welcomeText");
+<<<<<<< HEAD
 const dashboardDate =
   document.getElementById("dashboardDate");
 
@@ -170,6 +171,8 @@ if(dashboardDate) {
     year: "numeric"
   });
 }
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 
 let FolderSystem;
 let notebookState = {
@@ -195,6 +198,7 @@ const taskInput =
 const taskList =
   document.getElementById("taskList");
 
+<<<<<<< HEAD
 const sidebarFoldersCount =
   document.getElementById("sidebarFoldersCount");
 
@@ -206,6 +210,19 @@ const sidebarNotesCount =
 
 const sidebarTasksCount =
   document.getElementById("sidebarTasksCount");
+=======
+const totalFoldersCount =
+  document.getElementById("totalFoldersCount");
+
+const totalFilesCount =
+  document.getElementById("totalFilesCount");
+
+const totalNotesCount =
+  document.getElementById("totalNotesCount");
+
+const totalTasksCount =
+  document.getElementById("totalTasksCount");
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 
 const TASKS_STORAGE_KEY =
   getUserScopedKey("tasks");
@@ -278,6 +295,7 @@ function loadTasks() {
 
 }
 
+<<<<<<< HEAD
 function addTaskEntry(taskText, { clearInput = true } = {}) {
   const trimmedText = String(taskText || "").trim();
 
@@ -303,6 +321,8 @@ function addTaskEntry(taskText, { clearInput = true } = {}) {
   return true;
 }
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 function countFolderTreeMetrics(snapshot) {
   const totals = {
     folders: 0,
@@ -336,10 +356,17 @@ function updateWorkspaceStats() {
   const notebookPages = Array.isArray(notebookState.pages) ? notebookState.pages.length : 0;
   const noteTotal = counts.notes + notebookPages;
 
+<<<<<<< HEAD
   if(sidebarFoldersCount) sidebarFoldersCount.textContent = String(counts.folders);
   if(sidebarFilesCount) sidebarFilesCount.textContent = String(counts.files);
   if(sidebarNotesCount) sidebarNotesCount.textContent = String(noteTotal);
   if(sidebarTasksCount) sidebarTasksCount.textContent = String(Array.isArray(tasks) ? tasks.length : 0);
+=======
+  if(totalFoldersCount) totalFoldersCount.textContent = String(counts.folders);
+  if(totalFilesCount) totalFilesCount.textContent = String(counts.files);
+  if(totalNotesCount) totalNotesCount.textContent = String(noteTotal);
+  if(totalTasksCount) totalTasksCount.textContent = String(Array.isArray(tasks) ? tasks.length : 0);
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 }
 
 /* ADD TASK */
@@ -347,7 +374,31 @@ function updateWorkspaceStats() {
 if(addTaskBtn) {
 
   addTaskBtn.addEventListener("click", () => {
+<<<<<<< HEAD
     addTaskEntry(taskInput?.value || "");
+=======
+
+    const taskText =
+      taskInput.value;
+
+    if(taskText === "") return;
+
+    tasks.push({
+      text: taskText,
+      completed: false
+    });
+
+    localStorage.setItem(
+      TASKS_STORAGE_KEY,
+      JSON.stringify(tasks)
+    );
+
+    loadTasks();
+    notifySearchDataChanged("tasks");
+
+    taskInput.value = "";
+
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   });
 
 }
@@ -682,6 +733,7 @@ FolderSystem = (() => {
     dashboardFoldersGrid: document.getElementById("dashboardFoldersGrid"),
     folderTitle: document.getElementById("folderTitle"),
     folderBreadcrumbs: document.getElementById("folderBreadcrumbs"),
+<<<<<<< HEAD
     gridViewBtn: document.getElementById("gridViewBtn"),
     listViewBtn: document.getElementById("listViewBtn"),
     fileSortSelect: document.getElementById("fileSortSelect"),
@@ -728,6 +780,21 @@ FolderSystem = (() => {
     longPressFired: false,
     dragFileIds: [],
     dragSourceFolderId: ""
+=======
+    newRootFolderBtn: document.getElementById("newRootFolderBtn"),
+    newSubfolderBtn: document.getElementById("newSubfolderBtn"),
+    backBtn: document.getElementById("backBtn"),
+    addNoteBtn: document.getElementById("addNoteBtn"),
+    notesList: document.getElementById("notesList"),
+    addFileBtn: document.getElementById("addFileBtn"),
+    fileInput: document.getElementById("fileInput"),
+    filesList: document.getElementById("filesList"),
+    subfolderGrid: document.getElementById("subfolderGrid")
+  };
+
+  const state = {
+    activeFolderId: ""
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   };
 
   const FOLDER_TREE_STORAGE_KEY =
@@ -750,6 +817,7 @@ FolderSystem = (() => {
       return;
     }
 
+<<<<<<< HEAD
     state.viewMode = normalizeViewMode(state.viewMode);
     state.sortBy = normalizeSortMode(state.sortBy);
     state.filterBy = normalizeFilterMode(state.filterBy);
@@ -757,6 +825,10 @@ FolderSystem = (() => {
     folderTree = loadFolderTree();
     bindEvents();
     syncToolbarState();
+=======
+    folderTree = loadFolderTree();
+    bindEvents();
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     renderDashboardFolders();
     updateWorkspaceStats();
     restorePersistedFolderViewState();
@@ -768,6 +840,7 @@ FolderSystem = (() => {
 
   }
 
+<<<<<<< HEAD
   function normalizeViewMode(mode) {
     return mode === "list" ? "list" : "grid";
   }
@@ -924,6 +997,8 @@ FolderSystem = (() => {
     addTaskEntry(taskName);
   }
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   function bindEvents() {
 
     if(elements.dashboardFoldersGrid) {
@@ -959,6 +1034,7 @@ FolderSystem = (() => {
         const folderId = card.dataset.folder;
         if(folderId) openFolder(folderId);
       });
+<<<<<<< HEAD
 
       elements.dashboardFoldersGrid.addEventListener("contextmenu", (event) => {
         const card = event.target.closest(".folder-card");
@@ -975,6 +1051,8 @@ FolderSystem = (() => {
       elements.dashboardFoldersGrid.addEventListener("dragover", handleFolderDragOver);
       elements.dashboardFoldersGrid.addEventListener("dragleave", handleFolderDragLeave);
       elements.dashboardFoldersGrid.addEventListener("drop", handleFolderDrop);
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     }
 
     if(elements.subfolderGrid) {
@@ -1011,6 +1089,7 @@ FolderSystem = (() => {
         const folderId = card.dataset.folder;
         if(folderId) openFolder(folderId);
       });
+<<<<<<< HEAD
 
       elements.subfolderGrid.addEventListener("contextmenu", (event) => {
         const card = event.target.closest(".folder-card");
@@ -1027,6 +1106,8 @@ FolderSystem = (() => {
       elements.subfolderGrid.addEventListener("dragover", handleFolderDragOver);
       elements.subfolderGrid.addEventListener("dragleave", handleFolderDragLeave);
       elements.subfolderGrid.addEventListener("drop", handleFolderDrop);
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     }
 
     if(elements.backBtn) {
@@ -1042,6 +1123,7 @@ FolderSystem = (() => {
     }
 
     if(elements.newRootFolderBtn) {
+<<<<<<< HEAD
       elements.newRootFolderBtn.addEventListener("click", promptAndCreateRootFolder);
     }
 
@@ -1063,6 +1145,29 @@ FolderSystem = (() => {
 
     if(elements.quickNewTaskBtn) {
       elements.quickNewTaskBtn.addEventListener("click", promptAndCreateTask);
+=======
+      elements.newRootFolderBtn.addEventListener("click", () => {
+        const name = prompt("New root folder name", "New Folder");
+        if(!name) return;
+        const folder = createFolder(name.trim(), null);
+        if(folder) {
+          renderDashboardFolders();
+        }
+      });
+    }
+
+    if(elements.newSubfolderBtn) {
+      elements.newSubfolderBtn.addEventListener("click", () => {
+        if(!state.activeFolderId) return;
+        const name = prompt("New subfolder name", "New Subfolder");
+        if(!name) return;
+        const folder = createFolder(name.trim(), state.activeFolderId);
+        if(folder) {
+          renderSubfolders(state.activeFolderId);
+          renderDashboardFolders();
+        }
+      });
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     }
 
     if(elements.fileInput) {
@@ -1104,6 +1209,7 @@ FolderSystem = (() => {
         const card = event.target.closest(".file-card");
         if(!card || !elements.filesList.contains(card)) return;
         event.preventDefault();
+<<<<<<< HEAD
         const fileId = card.dataset.fileId;
         if(!fileId) return;
         if(event.key === " ") {
@@ -1150,10 +1256,16 @@ FolderSystem = (() => {
       elements.moveModal.addEventListener("click", (event) => {
         if(event.target === elements.moveModal) {
           closeMoveModal();
+=======
+        const index = Number(card.dataset.index);
+        if(!Number.isNaN(index)) {
+          openFileAtIndex(index);
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         }
       });
     }
 
+<<<<<<< HEAD
     if(elements.moveTargetList) {
       elements.moveTargetList.addEventListener("click", async (event) => {
         const targetButton = event.target.closest("[data-target-folder-id]");
@@ -1205,6 +1317,8 @@ FolderSystem = (() => {
       }
     });
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   }
 
   function normalizeFolderId(folderName) {
@@ -1676,6 +1790,7 @@ FolderSystem = (() => {
     saveFolderTree(folderTree);
   }
 
+<<<<<<< HEAD
   function setViewMode(viewMode) {
     state.viewMode = normalizeViewMode(viewMode);
     saveExplorerPreferences();
@@ -2325,14 +2440,19 @@ FolderSystem = (() => {
     openFile(file);
   }
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   function openFolder(folderId) {
 
     if(!folderId) return;
     if(!getFolderById(folderId)) return;
 
+<<<<<<< HEAD
     closeExplorerContextMenu();
     closeMoveModal();
     clearSelectedFiles();
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     state.activeFolderId = folderId;
     persistFolderViewState(true, folderId);
     syncActiveFolderCards();
@@ -2368,9 +2488,12 @@ FolderSystem = (() => {
   function closeFolder() {
 
     closeFilePreview();
+<<<<<<< HEAD
     closeExplorerContextMenu();
     closeMoveModal();
     clearSelectedFiles();
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 
     state.activeFolderId = "";
     persistFolderViewState(false);
@@ -2604,7 +2727,10 @@ FolderSystem = (() => {
       size: file.size || 0,
       extension: getFileExtension(file.name),
       uploadedAt: Date.now(),
+<<<<<<< HEAD
       modifiedAt: Date.now(),
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
       folderId: state.activeFolderId,
       previewDataUrl,
       textData: fallbackTextData || ""
@@ -2636,7 +2762,11 @@ FolderSystem = (() => {
 
     files.push(entry);
     saveFilesForFolder(state.activeFolderId, files);
+<<<<<<< HEAD
     renderFiles();
+=======
+    renderFiles(files);
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   }
 
   async function getFileTextFallback(file) {
@@ -2678,11 +2808,40 @@ FolderSystem = (() => {
     });
   }
 
+<<<<<<< HEAD
   async function legacyDeleteFile(index) {
     const files = getVisibleFiles(state.activeFolderId);
     const file = files[index];
     if(!file) return;
     deleteFilesByIds([file.id]);
+=======
+  async function deleteFile(index) {
+
+    if(!state.activeFolderId || index < 0) return;
+
+    const files =
+      getFilesForFolder(state.activeFolderId);
+
+    const file = files[index];
+
+    if(!file) return;
+
+    const shouldDelete =
+      confirm(`Delete "${file.name}" from ${formatFolderTitle(state.activeFolderId)}?`);
+
+    if(!shouldDelete) return;
+
+    files.splice(index, 1);
+
+    saveFilesForFolder(state.activeFolderId, files);
+
+    if(file.fileKey) {
+      FileDatabase.deleteFileData(file.fileKey).catch(() => {});
+    }
+
+    renderFiles(files);
+
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   }
 
   function renderFolderData() {
@@ -2692,8 +2851,16 @@ FolderSystem = (() => {
     const notes =
       getNotesForFolder(state.activeFolderId);
 
+<<<<<<< HEAD
     renderNotes(notes);
     renderFiles();
+=======
+    const files =
+      getFilesForFolder(state.activeFolderId);
+
+    renderNotes(notes);
+    renderFiles(files);
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     renderSubfolders(state.activeFolderId);
     updateBreadcrumbs();
     syncActiveFolderCards();
@@ -2733,6 +2900,7 @@ FolderSystem = (() => {
 
   }
 
+<<<<<<< HEAD
   function renderFiles(files = null) {
 
     if(!elements.filesList) return;
@@ -2756,6 +2924,20 @@ FolderSystem = (() => {
     activeFiles.forEach((file, index) => {
       const details = getFileDetails(file);
       const isSelected = state.selectedFileIds.has(file.id);
+=======
+  function renderFiles(files) {
+
+    if(!elements.filesList) return;
+
+    elements.filesList.innerHTML = "";
+
+    if(!files.length) {
+      elements.filesList.innerHTML = '<div class="file-item empty-state">No files in this folder yet.</div>';
+      return;
+    }
+
+    files.forEach((file, index) => {
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 
       const item =
         document.createElement("div");
@@ -2763,14 +2945,20 @@ FolderSystem = (() => {
       item.className = "file-item";
 
       item.innerHTML = `
+<<<<<<< HEAD
         <div class="file-card ${isSelected ? "is-selected" : ""}" data-file-id="${escapeText(file.id)}" data-file-index="${index}" role="button" tabindex="0" draggable="true" aria-selected="${isSelected ? "true" : "false"}">
           <div class="file-card-top">
             <div class="file-preview ${file.previewDataUrl ? "has-preview" : ""}">
+=======
+        <div class="file-card" data-index="${index}" data-file-id="${escapeText(file.id)}" role="button" tabindex="0">
+          <div class="file-preview ${file.previewDataUrl ? "has-preview" : ""}">
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
             ${
               file.previewDataUrl
                 ? `<img src="${file.previewDataUrl}" alt="${escapeText(file.name)}" class="file-preview-image">`
                 : `<div class="file-icon" aria-hidden="true">${getFileIconSvg(file.extension)}</div>`
             }
+<<<<<<< HEAD
             </div>
             <button class="file-card-menu-btn" type="button" data-file-id="${escapeText(file.id)}" aria-label="File actions for ${escapeText(file.name)}">⋮</button>
           </div>
@@ -2781,6 +2969,20 @@ FolderSystem = (() => {
               <div><span>Size</span><strong>${escapeText(details.size)}</strong></div>
               <div><span>Modified</span><strong>${escapeText(details.modified)}</strong></div>
             </div>
+=======
+            <button class="file-delete-btn" type="button" data-index="${index}" aria-label="Delete ${escapeText(file.name)}">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 7h12M9 7V5h6v2m-7 3v7m4-7v7m4-7v7M8 20h8a1 1 0 0 0 1-1V7H7v12a1 1 0 0 0 1 1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="file-meta">
+            <p class="file-name" title="${escapeText(file.name)}">${escapeText(file.name)}</p>
+            <p class="file-subtext">${formatFileLabel(file)}</p>
+          </div>
+          <div class="file-actions">
+            <button class="file-open-btn" type="button" data-index="${index}" aria-label="Open ${escapeText(file.name)}">Open</button>
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
           </div>
         </div>
       `;
@@ -2803,7 +3005,10 @@ FolderSystem = (() => {
         size: 0,
         extension: getFileExtension(entry),
         uploadedAt: Date.now(),
+<<<<<<< HEAD
         modifiedAt: Date.now(),
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         folderId: folderId || "",
         parentFolderId: null,
         previewDataUrl: "",
@@ -2821,7 +3026,10 @@ FolderSystem = (() => {
       size: Number(entry.size) || 0,
       extension: entry.extension || getFileExtension(entry.name || ""),
       uploadedAt: entry.uploadedAt || Date.now(),
+<<<<<<< HEAD
       modifiedAt: Number(entry.modifiedAt) || Number(entry.uploadedAt) || Date.now(),
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
       folderId: entry.folderId || folderId || "",
       parentFolderId: null,
       previewDataUrl: entry.previewDataUrl || "",
@@ -2881,6 +3089,7 @@ FolderSystem = (() => {
     return previewApi;
   }
 
+<<<<<<< HEAD
   function legacyHandleFilesListClick(event) {
     const card = event.target.closest(".file-card");
     if(!card) return;
@@ -2910,6 +3119,31 @@ FolderSystem = (() => {
 
   function legacyOpenFileAtIndex(index) {
     const files = getVisibleFiles(state.activeFolderId);
+=======
+  function handleFilesListClick(event) {
+    const deleteBtn =
+      event.target.closest(".file-delete-btn");
+
+    if(deleteBtn) {
+      const index = Number(deleteBtn.dataset.index);
+      if(!Number.isNaN(index)) {
+        deleteFile(index);
+      }
+      return;
+    }
+
+    const card = event.target.closest(".file-card");
+    if(!card) return;
+
+    const index = Number(card.dataset.index);
+    if(Number.isNaN(index)) return;
+
+    openFileAtIndex(index);
+  }
+
+  function openFileAtIndex(index) {
+    const files = getFilesForFolder(state.activeFolderId);
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     if(!files[index]) return;
     openFile(files[index]);
   }

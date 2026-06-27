@@ -1,6 +1,7 @@
 const SettingsPanel = (() => {
   const SETTINGS_STORAGE_KEY = getUserScopedKey("settings");
 
+<<<<<<< HEAD
   const DEFAULT_SETTINGS = {
     theme: "dark",
     accentColor: "#3b82f6",
@@ -88,6 +89,29 @@ const SettingsPanel = (() => {
   const state = { ...DEFAULT_SETTINGS };
   let saveIndicatorTimer = null;
   let sectionObserver = null;
+=======
+  const elements = {
+    navItem: document.querySelector('.nav-item[data-nav-target="settings"]'),
+    overlay: document.getElementById('settingsOverlay'),
+    closeButton: document.getElementById('closeSettingsBtn'),
+    themeToggle: document.getElementById('themeToggle'),
+    accentColorPicker: document.getElementById('accentColorPicker'),
+    accentSwatches: Array.from(document.querySelectorAll('.settings-swatch')),
+    glowSlider: document.getElementById('glowIntensity'),
+    glowValue: document.getElementById('glowValue'),
+    compactToggle: document.getElementById('compactModeToggle'),
+    fontSizeSlider: document.getElementById('fontSizeSlider'),
+    fontSizeValue: document.getElementById('fontSizeValue')
+  };
+
+  const state = {
+    theme: 'dark',
+    accentColor: '#3b82f6',
+    glowIntensity: 0.18,
+    compact: false,
+    fontSize: 16
+  };
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 
   function init() {
     if(!elements.overlay || !elements.navItem) {
@@ -95,10 +119,15 @@ const SettingsPanel = (() => {
     }
 
     loadSettings();
+<<<<<<< HEAD
     bindEvents();
     applySettings({ persist: false });
     updateAboutMetrics();
     updateSaveIndicator("All changes saved");
+=======
+    applySettings();
+    bindEvents();
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   }
 
   function loadSettings() {
@@ -106,6 +135,7 @@ const SettingsPanel = (() => {
       const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
       if(!saved) return;
       const parsed = JSON.parse(saved);
+<<<<<<< HEAD
       if(parsed && typeof parsed === "object") {
         Object.assign(state, normalizeSettings(parsed));
       }
@@ -223,18 +253,72 @@ const SettingsPanel = (() => {
 
     if(elements.overlay) {
       elements.overlay.addEventListener("click", (event) => {
+=======
+      if(parsed && typeof parsed === 'object') {
+        state.theme = parsed.theme === 'light' ? 'light' : 'dark';
+        state.accentColor = parsed.accentColor || state.accentColor;
+        state.glowIntensity = typeof parsed.glowIntensity === 'number' ? parsed.glowIntensity : state.glowIntensity;
+        state.compact = Boolean(parsed.compact);
+        state.fontSize = Number.isFinite(parsed.fontSize) ? parsed.fontSize : state.fontSize;
+      }
+    } catch {
+      // ignore invalid settings
+    }
+  }
+
+  function saveSettings() {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({
+      theme: state.theme,
+      accentColor: state.accentColor,
+      glowIntensity: state.glowIntensity,
+      compact: state.compact,
+      fontSize: state.fontSize
+    }));
+  }
+
+  function applySettings() {
+    document.body.classList.toggle('light-theme', state.theme === 'light');
+    document.body.classList.toggle('dark-theme', state.theme === 'dark');
+    document.body.classList.toggle('compact-mode', state.compact);
+    const rgb = hexToRgb(state.accentColor);
+    document.documentElement.style.setProperty('--accent-color', state.accentColor);
+    document.documentElement.style.setProperty('--accent-alt-color', getAltAccent(state.accentColor));
+    document.documentElement.style.setProperty('--accent-rgb', rgb);
+    document.documentElement.style.setProperty('--glow-intensity', state.glowIntensity.toFixed(2));
+    document.documentElement.style.setProperty('--accent-glow', `rgba(${rgb}, ${state.glowIntensity.toFixed(2)})`);
+    document.documentElement.style.setProperty('--accent-glow-soft', `rgba(${rgb}, ${Math.max(state.glowIntensity * 0.55, 0.02).toFixed(2)})`);
+    document.documentElement.style.setProperty('--font-size', `${state.fontSize}px`);
+    updateControlStates();
+  }
+
+  function bindEvents() {
+    elements.navItem.addEventListener('click', openSettings);
+
+    if(elements.closeButton) {
+      elements.closeButton.addEventListener('click', closeSettings);
+    }
+
+    if(elements.overlay) {
+      elements.overlay.addEventListener('click', (event) => {
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         if(event.target === elements.overlay) {
           closeSettings();
         }
       });
     }
 
+<<<<<<< HEAD
     document.addEventListener("keydown", (event) => {
       if(event.key === "Escape" && elements.overlay && !elements.overlay.classList.contains("hidden")) {
+=======
+    document.addEventListener('keydown', (event) => {
+      if(event.key === 'Escape' && elements.overlay && !elements.overlay.classList.contains('hidden')) {
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         closeSettings();
       }
     });
 
+<<<<<<< HEAD
     if(elements.searchInput) {
       elements.searchInput.addEventListener("input", (event) => {
         filterSections(event.target.value);
@@ -277,6 +361,27 @@ const SettingsPanel = (() => {
 
     elements.accentSwatches.forEach((swatch) => {
       swatch.addEventListener("click", () => {
+=======
+    if(elements.themeToggle) {
+      elements.themeToggle.addEventListener('click', () => {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        saveSettings();
+        applySettings();
+      });
+    }
+
+    if(elements.accentColorPicker) {
+      elements.accentColorPicker.addEventListener('input', (event) => {
+        state.accentColor = event.target.value;
+        syncSwatches();
+        saveSettings();
+        applySettings();
+      });
+    }
+
+    elements.accentSwatches.forEach((swatch) => {
+      swatch.addEventListener('click', () => {
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         const color = swatch.dataset.color;
         if(!color) return;
         state.accentColor = color;
@@ -284,11 +389,16 @@ const SettingsPanel = (() => {
           elements.accentColorPicker.value = color;
         }
         syncSwatches();
+<<<<<<< HEAD
         scheduleSaveIndicator();
+=======
+        saveSettings();
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         applySettings();
       });
     });
 
+<<<<<<< HEAD
     bindControl("glowIntensity", (event) => {
       state.glowIntensity = Number(event.target.value);
       if(elements.glowValue) {
@@ -548,6 +658,30 @@ const SettingsPanel = (() => {
       setTimeout(() => updateSaveIndicator("All changes saved"), 1200);
     } catch (error) {
       alert(`Cache clear failed: ${error?.message || "Unknown error"}`);
+=======
+    if(elements.glowSlider) {
+      elements.glowSlider.addEventListener('input', (event) => {
+        state.glowIntensity = Number(event.target.value);
+        saveSettings();
+        applySettings();
+      });
+    }
+
+    if(elements.compactToggle) {
+      elements.compactToggle.addEventListener('click', () => {
+        state.compact = !state.compact;
+        saveSettings();
+        applySettings();
+      });
+    }
+
+    if(elements.fontSizeSlider) {
+      elements.fontSizeSlider.addEventListener('input', (event) => {
+        state.fontSize = Number(event.target.value);
+        saveSettings();
+        applySettings();
+      });
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     }
   }
 
@@ -558,37 +692,63 @@ const SettingsPanel = (() => {
 
     if(!elements.overlay) return;
 
+<<<<<<< HEAD
     elements.overlay.classList.remove("hidden");
     elements.overlay.classList.add("visible");
     elements.overlay.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
     filterSections(elements.searchInput?.value || "");
     updateSectionNavState();
+=======
+    elements.overlay.classList.remove('hidden');
+    elements.overlay.classList.add('visible');
+    elements.overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   }
 
   function closeSettings() {
     if(!elements.overlay) return;
 
+<<<<<<< HEAD
     elements.overlay.classList.add("hidden");
     elements.overlay.classList.remove("visible");
     elements.overlay.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
+=======
+    elements.overlay.classList.add('hidden');
+    elements.overlay.classList.remove('visible');
+    elements.overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
 
     restorePreviousNav();
   }
 
   function restorePreviousNav() {
+<<<<<<< HEAD
     const previous = window.notepilotPreviousNavTarget || "dashboard";
     const navItems = document.querySelectorAll(".sidebar-nav .nav-item");
     navItems.forEach((item) => {
       item.classList.toggle("active", item.dataset.navTarget === previous);
+=======
+    const previous = window.notepilotPreviousNavTarget || 'dashboard';
+    const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
+    navItems.forEach((item) => {
+      item.classList.toggle('active', item.dataset.navTarget === previous);
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     });
   }
 
   function updateControlStates() {
     if(elements.themeToggle) {
+<<<<<<< HEAD
       elements.themeToggle.dataset.state = state.theme === "light" ? "true" : "false";
       elements.themeToggle.setAttribute("aria-pressed", state.theme === "light" ? "true" : "false");
+=======
+      elements.themeToggle.dataset.state = state.theme === 'light' ? 'true' : 'false';
+      elements.themeToggle.setAttribute('aria-pressed', state.theme === 'light' ? 'true' : 'false');
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     }
 
     if(elements.accentColorPicker) {
@@ -604,8 +764,13 @@ const SettingsPanel = (() => {
     }
 
     if(elements.compactToggle) {
+<<<<<<< HEAD
       elements.compactToggle.dataset.state = state.compact ? "true" : "false";
       elements.compactToggle.setAttribute("aria-pressed", state.compact ? "true" : "false");
+=======
+      elements.compactToggle.dataset.state = state.compact ? 'true' : 'false';
+      elements.compactToggle.setAttribute('aria-pressed', state.compact ? 'true' : 'false');
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     }
 
     if(elements.fontSizeSlider) {
@@ -616,6 +781,7 @@ const SettingsPanel = (() => {
       elements.fontSizeValue.textContent = `${state.fontSize}px`;
     }
 
+<<<<<<< HEAD
     if(elements.defaultViewSelect) elements.defaultViewSelect.value = state.defaultView;
     if(elements.landingPageSelect) elements.landingPageSelect.value = state.defaultLandingPage;
     if(elements.showHiddenFilesToggle) syncToggle(elements.showHiddenFilesToggle, state.showHiddenFiles);
@@ -718,6 +884,20 @@ const SettingsPanel = (() => {
   function hexToRgb(hex) {
     const cleaned = String(hex).replace("#", "").trim();
     if(cleaned.length !== 6) return "59, 130, 246";
+=======
+    syncSwatches();
+  }
+
+  function syncSwatches() {
+    elements.accentSwatches.forEach((swatch) => {
+      swatch.classList.toggle('active', swatch.dataset.color === state.accentColor);
+    });
+  }
+
+  function hexToRgb(hex) {
+    const cleaned = String(hex).replace('#', '').trim();
+    if(cleaned.length !== 6) return '59, 130, 246';
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     const bigint = parseInt(cleaned, 16);
     const r = (bigint >> 16) & 255;
     const g = (bigint >> 8) & 255;
@@ -726,8 +906,13 @@ const SettingsPanel = (() => {
   }
 
   function getAltAccent(color) {
+<<<<<<< HEAD
     const cleaned = String(color).replace("#", "").trim();
     if(cleaned.length !== 6) return "#8b5cf6";
+=======
+    const cleaned = String(color).replace('#', '').trim();
+    if(cleaned.length !== 6) return '#8b5cf6';
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     const bigint = parseInt(cleaned, 16);
     const r = Math.min(255, ((bigint >> 16) & 255) + 34);
     const g = Math.min(255, (((bigint >> 8) & 255) + 34));
@@ -735,6 +920,7 @@ const SettingsPanel = (() => {
     return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
   }
 
+<<<<<<< HEAD
   window.NotePilotSettings = {
     getSettings() {
       return { ...state };
@@ -756,6 +942,8 @@ const SettingsPanel = (() => {
     }
   };
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   return {
     init
   };

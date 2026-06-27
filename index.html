@@ -8,7 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Orbitron:wght@600;700;800&family=Poppins:ital,wght@0,600;0,700;1,600;1,700&family=Rajdhani:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<<<<<<< HEAD
   <link rel="icon" href="data:,">
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   <link rel="stylesheet" href="style.css">
   <!-- File Preview Libraries -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -92,6 +95,7 @@
         </a>
       </li>
     </ul>
+<<<<<<< HEAD
 
     <div class="sidebar-stats-section" id="sidebarStatsSection" aria-label="Workspace statistics">
       <div class="sidebar-stats-header">
@@ -118,6 +122,8 @@
         <strong class="sidebar-stat-value" id="sidebarTasksCount">0</strong>
       </div>
     </div>
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   </aside>
   <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
 
@@ -173,16 +179,22 @@
         </div>
       </div>
       <div class="header-content">
+<<<<<<< HEAD
         <div class="header-meta">
           <span class="header-badge">Productivity Workspace</span>
           <span id="dashboardDate" class="header-date"></span>
         </div>
         <h1 id="welcomeText">Welcome</h1>
         <p>Keep your folders, notes, files, and tasks in one calm workspace.</p>
+=======
+        <h1 id="welcomeText">Welcome</h1>
+        <p>Your personal productivity workspace</p>
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
       </div>
     </header>
 
     <section id="dashboardView" class="dashboard-section">
+<<<<<<< HEAD
       <div class="dashboard-quick-actions dashboard-panel">
         <div class="dashboard-section-heading">
           <div>
@@ -207,6 +219,36 @@
             <span class="quick-action-icon">✅</span>
             <span class="quick-action-label">New Task</span>
           </button>
+=======
+      <div class="dashboard-stats dashboard-panel">
+        <div class="stat-card">
+          <div class="stat-card-icon">📁</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Folders</p>
+            <strong id="totalFoldersCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">📄</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Files</p>
+            <strong id="totalFilesCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">📝</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Notes</p>
+            <strong id="totalNotesCount" class="stat-card-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-icon">✅</div>
+          <div class="stat-card-content">
+            <p class="stat-card-label">Total Tasks</p>
+            <strong id="totalTasksCount" class="stat-card-value">0</strong>
+          </div>
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
         </div>
       </div>
 
@@ -269,6 +311,7 @@
         <button id="newSubfolderBtn" class="action-btn">New Subfolder</button>
       </div>
 
+<<<<<<< HEAD
       <div class="folder-toolbar dashboard-panel">
         <div class="folder-toolbar-group">
           <div class="folder-toolbar-toggle" role="group" aria-label="File view mode">
@@ -304,6 +347,8 @@
         </div>
       </div>
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
       <div class="folder-view-content">
         <div class="folder-actions">
           <button id="addNoteBtn" class="action-btn">Add Note</button>
@@ -328,6 +373,7 @@
       </div>
     </section>
 
+<<<<<<< HEAD
     <div id="explorerContextMenu" class="explorer-context-menu hidden" aria-hidden="true"></div>
 
     <div id="moveFileModal" class="move-modal hidden" aria-hidden="true">
@@ -344,6 +390,8 @@
       </div>
     </div>
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
     <div id="filePreviewModal" class="preview-modal hidden" aria-hidden="true">
       <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
         <div class="preview-header">
@@ -387,6 +435,7 @@
         </div>
 
         <div class="settings-panel-content">
+<<<<<<< HEAD
           <aside class="settings-sidebar">
             <label class="settings-searchbar" for="settingsSearchInput">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -714,12 +763,82 @@
                 <a id="githubRepoBtn" class="settings-utility-btn" href="https://github.com/" target="_blank" rel="noreferrer noopener">GitHub Repository</a>
               </div>
             </details>
+=======
+          <div class="settings-panel-summary">
+            <p>Customize the look and feel of Note - Files with premium glassmorphism controls, neon glow accents, and smooth dashboard transitions.</p>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">
+              <span>Appearance</span>
+              <small>Adjust your workspace theme and display style.</small>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Theme mode</p>
+                <p class="settings-control-description">Switch between dark and light workspace styling.</p>
+              </div>
+              <button id="themeToggle" type="button" class="settings-toggle" aria-pressed="false">
+                <span class="settings-toggle-thumb"></span>
+              </button>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Accent color</p>
+                <p class="settings-control-description">Pick a neon accent that powers borders, glows, and highlights.</p>
+              </div>
+              <div class="settings-color-group">
+                <div class="settings-color-palette">
+                  <button type="button" class="settings-swatch" data-color="#3b82f6" style="background: #3b82f6"></button>
+                  <button type="button" class="settings-swatch" data-color="#8b5cf6" style="background: #8b5cf6"></button>
+                  <button type="button" class="settings-swatch" data-color="#06b6d4" style="background: #06b6d4"></button>
+                  <button type="button" class="settings-swatch" data-color="#ec4899" style="background: #ec4899"></button>
+                </div>
+                <input id="accentColorPicker" type="color" value="#3b82f6" class="settings-color-picker">
+              </div>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">RGB glow intensity</p>
+                <p class="settings-control-description">Control the ambient glow strength across dashboard elements.</p>
+              </div>
+              <div class="settings-slider-group">
+                <input id="glowIntensity" type="range" min="0.05" max="0.45" step="0.01" value="0.18">
+                <span id="glowValue" class="settings-slider-value">18%</span>
+              </div>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Compact mode</p>
+                <p class="settings-control-description">Reduce spacing for a tighter, productivity-focused layout.</p>
+              </div>
+              <button id="compactModeToggle" type="button" class="settings-toggle" aria-pressed="false">
+                <span class="settings-toggle-thumb"></span>
+              </button>
+            </div>
+
+            <div class="settings-control">
+              <div>
+                <p class="settings-control-title">Font size</p>
+                <p class="settings-control-description">Scale the dashboard typography to your comfort.</p>
+              </div>
+              <div class="settings-slider-group">
+                <input id="fontSizeSlider" type="range" min="14" max="20" step="1" value="16">
+                <span id="fontSizeValue" class="settings-slider-value">16px</span>
+              </div>
+            </div>
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
           </div>
         </div>
       </div>
     </div>
   </main>
 
+<<<<<<< HEAD
   <div class="fab-shell" id="fabShell" aria-label="Quick actions">
     <button id="fabMainBtn" class="fab-button" type="button" aria-label="Open quick actions" aria-haspopup="menu" aria-expanded="false" aria-controls="fabMenu">
       <span class="fab-icon" aria-hidden="true">+</span>
@@ -748,6 +867,8 @@
     </div>
   </div>
 
+=======
+>>>>>>> 2d10069681dffea49f3dbef3f147d49feb751355
   <script src="js/filePreview.js"></script>
   <script src="script.js"></script>
   <script src="settings.js"></script>

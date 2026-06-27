@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Note - Files</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Orbitron:wght@600;700;800&family=Poppins:ital,wght@0,600;0,700;1,600;1,700&family=Rajdhani:wght@600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+  <!-- File Preview Libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+
+<body class="dashboard-body">
+
+  <aside class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <div class="sidebar-logo">
+      <img src="assets/images/logo.png" alt="Logo">
+    </div>
+
+    <ul class="sidebar-nav" id="sidebarNav">
+      <li class="nav-item active" data-nav-target="dashboard">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item" data-nav-target="notes">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 4h10l3 3v13H4V4h3zm3 0v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Notes</span>
+        </a>
+      </li>
+      <li class="nav-item" data-nav-target="tasks">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 11l3 3L22 4M21 12v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Tasks</span>
+        </a>
+      </li>
+      <li class="nav-item" data-nav-target="files">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Files</span>
+        </a>
+      </li>
+      <li class="nav-item" data-nav-target="settings">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7zm7.5-2.5h-1.8a7.9 7.9 0 0 0-1.2-2.7l1.2-1.2-1.5-1.5-1.2 1.2A7.9 7.9 0 0 0 12 4.3V2h-1.8v2.3a7.9 7.9 0 0 0-2.7 1.2L6.3 5.7 4.8 7.2l1.2 1.2A7.9 7.9 0 0 0 4.3 12H2v1.8h2.3a7.9 7.9 0 0 0 1.2 2.7L4.3 17.3l1.5 1.5 1.2-1.2A7.9 7.9 0 0 0 12 19.7V22h1.8v-2.3a7.9 7.9 0 0 0 2.7-1.2l1.2 1.2 1.5-1.5-1.2-1.2a7.9 7.9 0 0 0 1.2-2.7H19.5V13z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Settings</span>
+        </a>
+      </li>
+      <li class="nav-item nav-logout" id="logoutBtn" data-nav-target="logout">
+        <a href="#" class="nav-link">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14 16l4-4-4-4M18 12H9M12 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="nav-text">Logout</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-stats-section" id="sidebarStatsSection" aria-label="Workspace statistics">
+      <div class="sidebar-stats-header">
+        <h3>Workspace Statistics</h3>
+      </div>
+      <div class="sidebar-stat-row">
+        <span class="sidebar-stat-icon" aria-hidden="true">📁</span>
+        <span class="sidebar-stat-label">Folders</span>
+        <strong class="sidebar-stat-value" id="sidebarFoldersCount">0</strong>
+      </div>
+      <div class="sidebar-stat-row">
+        <span class="sidebar-stat-icon" aria-hidden="true">📄</span>
+        <span class="sidebar-stat-label">Files</span>
+        <strong class="sidebar-stat-value" id="sidebarFilesCount">0</strong>
+      </div>
+      <div class="sidebar-stat-row">
+        <span class="sidebar-stat-icon" aria-hidden="true">📝</span>
+        <span class="sidebar-stat-label">Notes</span>
+        <strong class="sidebar-stat-value" id="sidebarNotesCount">0</strong>
+      </div>
+      <div class="sidebar-stat-row">
+        <span class="sidebar-stat-icon" aria-hidden="true">✅</span>
+        <span class="sidebar-stat-label">Tasks</span>
+        <strong class="sidebar-stat-value" id="sidebarTasksCount">0</strong>
+      </div>
+    </div>
+  </aside>
+  <div id="sidebarOverlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+  <main class="main-content">
+    <header class="dashboard-header">
+      <div class="top-nav">
+        <div class="top-nav-left">
+          <button id="mobileMenuToggle" class="mobile-menu-toggle" type="button" aria-label="Open navigation menu" aria-controls="sidebar" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <div class="top-nav-title">
+            <strong>Note - Files</strong>
+            <small>Productivity Workspace</small>
+          </div>
+          <div id="globalSearchBox" class="top-nav-search global-search-shell">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm9 16-3.8-3.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <input id="globalSearchInput" type="search" placeholder="Search folders, files, notes..." autocomplete="off" spellcheck="false" aria-expanded="false" aria-controls="globalSearchPanel">
+            <div id="globalSearchPanel" class="global-search-panel hidden" aria-hidden="true">
+              <div class="global-search-filters" role="tablist" aria-label="Search filters">
+                <button type="button" class="global-search-filter is-active" data-search-filter="all">All</button>
+                <button type="button" class="global-search-filter" data-search-filter="folders">Folders</button>
+                <button type="button" class="global-search-filter" data-search-filter="files">Files</button>
+                <button type="button" class="global-search-filter" data-search-filter="notes">Notes</button>
+                <button type="button" class="global-search-filter" data-search-filter="tasks">Tasks</button>
+              </div>
+              <div id="globalSearchResults" class="global-search-results" role="listbox" aria-label="Global search results"></div>
+              <p id="globalSearchEmpty" class="global-search-empty hidden">No matching results found</p>
+            </div>
+          </div>
+        </div>
+        <div class="top-nav-actions">
+          <button type="button" class="top-nav-icon-btn" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0a3 3 0 0 1-6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button type="button" class="top-nav-icon-btn" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5A3.5 3.5 0 1 1 8.5 12 3.5 3.5 0 0 1 12 8.5zm8 3.5-1.8-.7a6.9 6.9 0 0 0-.6-1.5l.8-1.8-1.7-1.7-1.8.8a6.9 6.9 0 0 0-1.5-.6L12 4h-2l-.7 1.8a6.9 6.9 0 0 0-1.5.6L6 5.6 4.3 7.3l.8 1.8a6.9 6.9 0 0 0-.6 1.5L2.7 12v2l1.8.7a6.9 6.9 0 0 0 .6 1.5l-.8 1.8L6 19.7l1.8-.8a6.9 6.9 0 0 0 1.5.6L10 21.3h2l.7-1.8a6.9 6.9 0 0 0 1.5-.6l1.8.8 1.7-1.7-.8-1.8a6.9 6.9 0 0 0 .6-1.5L20 14z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="profile-chip">
+            <span class="profile-avatar">NP</span>
+            <div>
+              <strong>NotePilot</strong>
+              <small>Workspace</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="header-content">
+        <div class="header-meta">
+          <span class="header-badge">Productivity Workspace</span>
+          <span id="dashboardDate" class="header-date"></span>
+        </div>
+        <h1 id="welcomeText">Welcome</h1>
+        <p>Keep your folders, notes, files, and tasks in one calm workspace.</p>
+      </div>
+    </header>
+
+    <section id="dashboardView" class="dashboard-section">
+      <div class="dashboard-quick-actions dashboard-panel">
+        <div class="dashboard-section-heading">
+          <div>
+            <h2 class="section-title">Quick Actions</h2>
+            <p class="folder-panel-subtitle">Launch your most common workspace tasks instantly.</p>
+          </div>
+        </div>
+        <div class="quick-action-grid">
+          <button type="button" id="quickNewFolderBtn" class="quick-action-card">
+            <span class="quick-action-icon">📁</span>
+            <span class="quick-action-label">New Folder</span>
+          </button>
+          <button type="button" id="quickNewNoteBtn" class="quick-action-card">
+            <span class="quick-action-icon">📝</span>
+            <span class="quick-action-label">New Note</span>
+          </button>
+          <button type="button" id="quickUploadBtn" class="quick-action-card">
+            <span class="quick-action-icon">📄</span>
+            <span class="quick-action-label">Upload File</span>
+          </button>
+          <button type="button" id="quickNewTaskBtn" class="quick-action-card">
+            <span class="quick-action-icon">✅</span>
+            <span class="quick-action-label">New Task</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="folders-container dashboard-panel" id="foldersSection">
+        <div class="folder-panel-header">
+          <div>
+            <h2 class="section-title">Your Folders</h2>
+            <p class="folder-panel-subtitle">Create nested workspaces and browse your folder hierarchy.</p>
+          </div>
+          <button id="newRootFolderBtn" class="action-btn">New Folder</button>
+        </div>
+
+        <div id="dashboardFoldersGrid" class="folders-grid"></div>
+      </div>
+
+      <div class="dashboard-widgets dashboard-panel">
+        <div class="widget-card" id="tasksSection">
+          <div class="card-header">
+            <h2>Todo List</h2>
+          </div>
+          <div class="card-body">
+            <div class="todo-input">
+              <input type="text" id="taskInput" placeholder="Add a new task...">
+              <button id="addTaskBtn" class="btn-add">+</button>
+            </div>
+            <ul id="taskList" class="task-list"></ul>
+          </div>
+        </div>
+
+        <div class="widget-card" id="notesSection">
+          <div class="card-header">
+            <h2>Quick Notes</h2>
+          </div>
+          <div class="card-body">
+            <div class="notebook-panel">
+              <div class="notebook-toolbar">
+                <div class="notebook-nav">
+                  <button id="prevPageBtn" type="button" class="notebook-btn">Previous Page</button>
+                  <button id="nextPageBtn" type="button" class="notebook-btn">Next Page</button>
+                  <button id="newPageBtn" type="button" class="notebook-btn notebook-btn-primary">New Page</button>
+                  <button id="deletePageBtn" type="button" class="notebook-btn notebook-btn-danger">Delete Page</button>
+                </div>
+                <p id="notesPageIndicator" class="notes-page-indicator">Page 1 / 1</p>
+              </div>
+              <textarea id="notesArea" placeholder="Write your notes here..." class="notes-textarea"></textarea>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="folderView" class="folder-view hidden">
+      <div class="folder-view-header">
+        <button id="backBtn" class="back-btn">Back</button>
+        <div class="folder-view-header-group">
+          <h2 id="folderTitle">Folder</h2>
+          <div id="folderBreadcrumbs" class="folder-breadcrumbs">Root</div>
+        </div>
+        <button id="newSubfolderBtn" class="action-btn">New Subfolder</button>
+      </div>
+
+      <div class="folder-toolbar dashboard-panel">
+        <div class="folder-toolbar-group">
+          <div class="folder-toolbar-toggle" role="group" aria-label="File view mode">
+            <button id="gridViewBtn" type="button" class="toolbar-toggle-btn is-active" data-view-mode="grid" aria-pressed="true">Grid</button>
+            <button id="listViewBtn" type="button" class="toolbar-toggle-btn" data-view-mode="list" aria-pressed="false">List</button>
+          </div>
+          <div class="folder-toolbar-selects">
+            <label class="toolbar-field">
+              <span>Sort</span>
+              <select id="fileSortSelect" class="toolbar-select" aria-label="Sort files">
+                <option value="name">Name</option>
+                <option value="date">Date</option>
+                <option value="size">Size</option>
+                <option value="type">Type</option>
+              </select>
+            </label>
+            <label class="toolbar-field">
+              <span>Filter</span>
+              <select id="fileFilterSelect" class="toolbar-select" aria-label="Filter files">
+                <option value="all">All</option>
+                <option value="images">Images</option>
+                <option value="documents">Documents</option>
+                <option value="pdfs">PDFs</option>
+                <option value="notes">Notes</option>
+                <option value="others">Others</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="folder-toolbar-status">
+          <span id="selectedFilesBadge" class="selected-files-badge">0 selected</span>
+          <button id="clearSelectionBtn" type="button" class="toolbar-link-btn">Clear selection</button>
+        </div>
+      </div>
+
+      <div class="folder-view-content">
+        <div class="folder-actions">
+          <button id="addNoteBtn" class="action-btn">Add Note</button>
+          <button id="addFileBtn" class="action-btn">Add File</button>
+        </div>
+
+        <div class="folder-section">
+          <h3>Subfolders</h3>
+          <div id="subfolderGrid" class="folders-grid"></div>
+        </div>
+
+        <div class="folder-section">
+          <h3>Notes</h3>
+          <div id="notesList"></div>
+        </div>
+
+        <div class="folder-section">
+          <h3>Files</h3>
+          <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.gif,.webp,.svg,.bmp,.avif,.pdf,.txt,.md,.csv,.log,.json,.js,.ts,.html,.css,.xml,.yml,.yaml,.doc,.docx,.rtf,.xls,.xlsx,.ppt,.pptx" hidden>
+          <div id="filesList"></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="explorerContextMenu" class="explorer-context-menu hidden" aria-hidden="true"></div>
+
+    <div id="moveFileModal" class="move-modal hidden" aria-hidden="true">
+      <div class="move-panel" role="dialog" aria-modal="true" aria-labelledby="moveFileTitle">
+        <div class="move-panel-header">
+          <div>
+            <p class="move-panel-label">Move file</p>
+            <h3 id="moveFileTitle">Choose destination</h3>
+          </div>
+          <button id="closeMoveModalBtn" type="button" class="move-close-btn" aria-label="Close move dialog">×</button>
+        </div>
+        <p id="moveFileSubtitle" class="move-panel-subtitle">Select a folder destination for the chosen file or selection.</p>
+        <div id="moveTargetList" class="move-target-list"></div>
+      </div>
+    </div>
+
+    <div id="filePreviewModal" class="preview-modal hidden" aria-hidden="true">
+      <div class="preview-panel" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="preview-header">
+          <div class="preview-header-meta">
+            <h3 id="previewTitle" class="preview-title">File Preview</h3>
+            <p id="previewSubtitle" class="preview-subtitle">Select a file to view</p>
+            <span id="previewTypeBadge" class="preview-type-badge">FILE</span>
+          </div>
+          <div class="preview-header-actions">
+            <a id="previewDownloadBtn" class="preview-download-btn is-disabled" href="#" download aria-disabled="true" aria-label="Download file">Download</a>
+            <button id="previewMaxBtn" type="button" class="preview-window-btn preview-max-btn" aria-pressed="false" aria-label="Maximize preview" title="Maximize preview">
+              <span class="preview-window-icon preview-window-icon-max" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+              <span class="preview-window-icon preview-window-icon-restore" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M9 9h11v11H9zM4 4h11v2H6v9H4z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            </button>
+            <button id="previewCloseBtn" type="button" class="preview-close" aria-label="Close preview">&times;</button>
+          </div>
+        </div>
+        <div class="preview-body">
+          <div id="previewLoader" class="preview-loader hidden">Loading file...</div>
+          <div id="previewError" class="preview-error hidden"></div>
+          <div id="previewContent" class="preview-content"></div>
+        </div>
+      </div>
+    </div>
+    <div id="settingsOverlay" class="settings-overlay hidden" aria-hidden="true">
+      <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-panel-header">
+          <div>
+            <p class="settings-panel-label">Workspace Preferences</p>
+            <h2 id="settingsTitle">Settings</h2>
+          </div>
+          <button id="closeSettingsBtn" type="button" class="settings-close" aria-label="Close settings">×</button>
+        </div>
+
+        <div class="settings-panel-content">
+          <aside class="settings-sidebar">
+            <label class="settings-searchbar" for="settingsSearchInput">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zm9 16-3.8-3.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              <input id="settingsSearchInput" type="search" placeholder="Search settings" autocomplete="off" spellcheck="false">
+            </label>
+            <nav id="settingsSectionNav" class="settings-section-nav" aria-label="Settings sections">
+              <button type="button" class="settings-nav-chip is-active" data-settings-jump="appearance">Appearance</button>
+              <button type="button" class="settings-nav-chip" data-settings-jump="workspace">Workspace</button>
+              <button type="button" class="settings-nav-chip" data-settings-jump="files">File & Preview</button>
+              <button type="button" class="settings-nav-chip" data-settings-jump="notifications">Notifications</button>
+              <button type="button" class="settings-nav-chip" data-settings-jump="performance">Performance</button>
+              <button type="button" class="settings-nav-chip" data-settings-jump="accessibility">Accessibility</button>
+              <button type="button" class="settings-nav-chip" data-settings-jump="about">About</button>
+            </nav>
+            <div class="settings-utility-actions">
+              <button id="resetSettingsBtn" type="button" class="settings-utility-btn settings-utility-btn-secondary">Reset to Default</button>
+              <button id="exportSettingsBtn" type="button" class="settings-utility-btn">Export Settings</button>
+              <label class="settings-utility-btn settings-utility-btn-secondary settings-import-label">
+                Import Settings
+                <input id="importSettingsInput" type="file" accept="application/json" hidden>
+              </label>
+            </div>
+            <div id="settingsSaveIndicator" class="settings-save-indicator">All changes saved</div>
+          </aside>
+
+          <div class="settings-content-scroll">
+            <div class="settings-panel-summary">
+              <div class="settings-panel-hero">
+                <div class="settings-panel-hero-icon" aria-hidden="true">⚙️</div>
+                <div class="settings-panel-hero-copy">
+                  <p class="settings-panel-label">Premium workspace controls</p>
+                  <h3>Fine-tune your workflow</h3>
+                  <p>Adjust appearance, workspace behavior, preview tools, and accessibility in one calm control center.</p>
+                </div>
+              </div>
+            </div>
+
+            <details class="settings-section" data-settings-section="appearance" open>
+              <summary class="settings-section-summary">
+                <span>Appearance</span>
+                <small>Theme, accent and density.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Theme mode</p>
+                    <p class="settings-control-description">Switch between dark and light workspace styling.</p>
+                  </div>
+                  <button id="themeToggle" type="button" class="settings-toggle" aria-pressed="false">
+                    <span class="settings-toggle-thumb"></span>
+                  </button>
+                </div>
+
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Accent color</p>
+                    <p class="settings-control-description">Pick a neon accent that powers borders, glows, and highlights.</p>
+                  </div>
+                  <div class="settings-color-group">
+                    <div class="settings-color-palette">
+                      <button type="button" class="settings-swatch" data-color="#3b82f6" style="background: #3b82f6"></button>
+                      <button type="button" class="settings-swatch" data-color="#2563eb" style="background: #2563eb"></button>
+                      <button type="button" class="settings-swatch" data-color="#06b6d4" style="background: #06b6d4"></button>
+                      <button type="button" class="settings-swatch" data-color="#0ea5e9" style="background: #0ea5e9"></button>
+                    </div>
+                    <input id="accentColorPicker" type="color" value="#3b82f6" class="settings-color-picker">
+                  </div>
+                </div>
+
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">RGB glow intensity</p>
+                    <p class="settings-control-description">Control the ambient glow strength across dashboard elements.</p>
+                  </div>
+                  <div class="settings-slider-group">
+                    <input id="glowIntensity" type="range" min="0.05" max="0.45" step="0.01" value="0.18">
+                    <span id="glowValue" class="settings-slider-value">18%</span>
+                  </div>
+                </div>
+
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Font size</p>
+                    <p class="settings-control-description">Scale the dashboard typography to your comfort.</p>
+                  </div>
+                  <div class="settings-slider-group">
+                    <input id="fontSizeSlider" type="range" min="14" max="20" step="1" value="16">
+                    <span id="fontSizeValue" class="settings-slider-value">16px</span>
+                  </div>
+                </div>
+
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Compact mode</p>
+                    <p class="settings-control-description">Reduce spacing for a tighter, productivity-focused layout.</p>
+                  </div>
+                  <button id="compactModeToggle" type="button" class="settings-toggle" aria-pressed="false">
+                    <span class="settings-toggle-thumb"></span>
+                  </button>
+                </div>
+              </div>
+            </details>
+
+            <details class="settings-section" data-settings-section="workspace">
+              <summary class="settings-section-summary">
+                <span>Workspace</span>
+                <small>Landing, folders and file explorer defaults.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Default view</p>
+                    <p class="settings-control-description">Choose the explorer layout when a folder opens.</p>
+                  </div>
+                  <select id="defaultViewSelect" class="settings-select">
+                    <option value="grid">Grid</option>
+                    <option value="list">List</option>
+                  </select>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Default landing page</p>
+                    <p class="settings-control-description">Select which section opens first after sign-in.</p>
+                  </div>
+                  <select id="landingPageSelect" class="settings-select">
+                    <option value="dashboard">Dashboard</option>
+                    <option value="files">Files</option>
+                    <option value="notes">Notes</option>
+                    <option value="tasks">Tasks</option>
+                  </select>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Show hidden files</p>
+                    <p class="settings-control-description">Keep advanced files visible in the explorer.</p>
+                  </div>
+                  <button id="showHiddenFilesToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Auto-expand folders</p>
+                    <p class="settings-control-description">Open folder groups automatically when navigating.</p>
+                  </div>
+                  <button id="autoExpandFoldersToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Confirm before delete</p>
+                    <p class="settings-control-description">Ask before deleting folders or files.</p>
+                  </div>
+                  <button id="confirmBeforeDeleteToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+              </div>
+            </details>
+
+            <details class="settings-section" data-settings-section="files">
+              <summary class="settings-section-summary">
+                <span>File & Preview</span>
+                <small>Preview and file interaction preferences.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Preview size</p>
+                    <p class="settings-control-description">Set the preview window size profile.</p>
+                  </div>
+                  <select id="previewSizeSelect" class="settings-select">
+                    <option value="comfortable">Comfortable</option>
+                    <option value="large">Large</option>
+                    <option value="fullscreen">Fullscreen</option>
+                  </select>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Open files in new window</p>
+                    <p class="settings-control-description">Use a separate window for file previews.</p>
+                  </div>
+                  <button id="openFilesNewWindowToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Auto preview</p>
+                    <p class="settings-control-description">Open a preview immediately when clicking a file.</p>
+                  </div>
+                  <button id="autoPreviewToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Download location</p>
+                    <p class="settings-control-description">Choose how downloads should be handled.</p>
+                  </div>
+                  <select id="downloadLocationSelect" class="settings-select">
+                    <option value="browser">Browser default</option>
+                    <option value="downloads">Downloads folder</option>
+                    <option value="ask">Ask each time</option>
+                  </select>
+                </div>
+                <div class="settings-control">
+                  <div>
+                    <p class="settings-control-title">Image quality</p>
+                    <p class="settings-control-description">Pick the default image preview quality.</p>
+                  </div>
+                  <select id="imageQualitySelect" class="settings-select">
+                    <option value="balanced">Balanced</option>
+                    <option value="high">High</option>
+                    <option value="ultra">Ultra</option>
+                  </select>
+                </div>
+              </div>
+            </details>
+
+            <details class="settings-section" data-settings-section="notifications">
+              <summary class="settings-section-summary">
+                <span>Notifications</span>
+                <small>Signals, toasts and feedback.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Enable notifications</p><p class="settings-control-description">Turn on workspace notifications.</p></div>
+                  <button id="enableNotificationsToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Success toasts</p><p class="settings-control-description">Show confirmations after successful actions.</p></div>
+                  <button id="successToastsToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Error toasts</p><p class="settings-control-description">Show visible feedback when something fails.</p></div>
+                  <button id="errorToastsToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Sound effects</p><p class="settings-control-description">Play subtle confirmation sounds.</p></div>
+                  <button id="soundEffectsToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Animation level</p><p class="settings-control-description">Control the motion intensity across the app.</p></div>
+                  <select id="animationLevelSelect" class="settings-select">
+                    <option value="full">Full</option>
+                    <option value="soft">Soft</option>
+                    <option value="minimal">Minimal</option>
+                  </select>
+                </div>
+              </div>
+            </details>
+
+            <details class="settings-section" data-settings-section="performance">
+              <summary class="settings-section-summary">
+                <span>Performance</span>
+                <small>Speed and resource preferences.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Hardware acceleration</p><p class="settings-control-description">Favor GPU-accelerated rendering when available.</p></div>
+                  <button id="hardwareAccelerationToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Lazy loading</p><p class="settings-control-description">Load heavy media only when needed.</p></div>
+                  <button id="lazyLoadingToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Cache size</p><p class="settings-control-description">Control how aggressively the app caches data.</p></div>
+                  <div class="settings-slider-group">
+                    <input id="cacheSizeSlider" type="range" min="25" max="500" step="25" value="150">
+                    <span id="cacheSizeValue" class="settings-slider-value">150 MB</span>
+                  </div>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Clear cache</p><p class="settings-control-description">Remove cached preview and workspace data.</p></div>
+                  <button id="clearCacheBtn" type="button" class="settings-utility-btn settings-utility-btn-secondary">Clear Cache</button>
+                </div>
+              </div>
+            </details>
+
+            <details class="settings-section" data-settings-section="accessibility">
+              <summary class="settings-section-summary">
+                <span>Accessibility</span>
+                <small>Comfort and keyboard support.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-control">
+                  <div><p class="settings-control-title">High contrast mode</p><p class="settings-control-description">Increase visual contrast across the interface.</p></div>
+                  <button id="highContrastToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Keyboard navigation</p><p class="settings-control-description">Keep keyboard-first navigation optimized.</p></div>
+                  <button id="keyboardNavigationToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Focus indicators</p><p class="settings-control-description">Show stronger focus rings on interactive elements.</p></div>
+                  <button id="focusIndicatorsToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Reduce motion</p><p class="settings-control-description">Reduce motion and animation intensity.</p></div>
+                  <button id="reduceMotionToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+                <div class="settings-control">
+                  <div><p class="settings-control-title">Larger click targets</p><p class="settings-control-description">Make controls easier to tap and click.</p></div>
+                  <button id="largerTargetsToggle" type="button" class="settings-toggle" aria-pressed="false"><span class="settings-toggle-thumb"></span></button>
+                </div>
+              </div>
+            </details>
+
+            <details class="settings-section" data-settings-section="about">
+              <summary class="settings-section-summary">
+                <span>About</span>
+                <small>Version, usage and links.</small>
+              </summary>
+              <div class="settings-section-body">
+                <div class="settings-about-card">
+                  <img src="assets/images/logo.png" alt="Note - Files logo" class="settings-about-logo">
+                  <div>
+                    <p class="settings-control-title">Note - Files</p>
+                    <p class="settings-control-description">A polished workspace for folders, notes, files and tasks.</p>
+                  </div>
+                </div>
+                <div class="settings-about-metrics">
+                  <div><span>Version</span><strong id="appVersionValue">v1.0</strong></div>
+                  <div><span>Storage used</span><strong id="storageUsedValue">0 MB</strong></div>
+                  <div><span>Total files</span><strong id="totalFilesValue">0</strong></div>
+                  <div><span>Total notes</span><strong id="totalNotesValue">0</strong></div>
+                  <div><span>Total folders</span><strong id="totalFoldersValue">0</strong></div>
+                  <div><span>Total tasks</span><strong id="totalTasksValue">0</strong></div>
+                </div>
+                <a id="githubRepoBtn" class="settings-utility-btn" href="https://github.com/" target="_blank" rel="noreferrer noopener">GitHub Repository</a>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="fab-shell" id="fabShell" aria-label="Quick actions">
+    <button id="fabMainBtn" class="fab-button" type="button" aria-label="Open quick actions" aria-haspopup="menu" aria-expanded="false" aria-controls="fabMenu">
+      <span class="fab-icon" aria-hidden="true">+</span>
+    </button>
+    <div id="fabMenu" class="fab-menu" role="menu" aria-label="Quick actions menu" aria-hidden="true">
+      <button class="fab-menu-item" type="button" data-fab-action="folder" role="menuitem">
+        <span class="fab-menu-icon" aria-hidden="true">📁</span>
+        <span class="fab-menu-label">New Folder</span>
+      </button>
+      <button class="fab-menu-item" type="button" data-fab-action="subfolder" role="menuitem">
+        <span class="fab-menu-icon" aria-hidden="true">📂</span>
+        <span class="fab-menu-label">New Subfolder</span>
+      </button>
+      <button class="fab-menu-item" type="button" data-fab-action="note" role="menuitem">
+        <span class="fab-menu-icon" aria-hidden="true">📝</span>
+        <span class="fab-menu-label">New Note</span>
+      </button>
+      <button class="fab-menu-item" type="button" data-fab-action="upload" role="menuitem">
+        <span class="fab-menu-icon" aria-hidden="true">📄</span>
+        <span class="fab-menu-label">Upload File</span>
+      </button>
+      <button class="fab-menu-item" type="button" data-fab-action="task" role="menuitem">
+        <span class="fab-menu-icon" aria-hidden="true">✅</span>
+        <span class="fab-menu-label">New Task</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="js/filePreview.js"></script>
+  <script src="script.js"></script>
+  <script src="settings.js"></script>
+  <script src="js/search.js"></script>
+</body>
+
+</html>
+
+
